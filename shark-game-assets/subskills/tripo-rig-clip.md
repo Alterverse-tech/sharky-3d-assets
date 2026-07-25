@@ -7,6 +7,12 @@ description: Animate an existing Tripo GLB/model task by running Tripo rig plus 
 
 Use this subskill when the user already has a GLB or Tripo model task and asks for rigging, auto-rigging, animation clips, retargeting, idle, walk, run, jump, or fixing Tripo multi-animation retarget issues. Also use it as the required continuation of the `gemini_reference` route for generated `character` or `creature` assets.
 
+## Prerequisites and reach
+
+- Every operation in this flow requires a Tripo task id (`originalModelTaskId`). A bare GLB file is not enough input.
+- Local manifests written by this skill's client do not contain task ids: `asset_manifest.json` and the progress files are anonymized, and provider task ids are stripped before they reach disk.
+- Consequently, GLBs generated over the direct `tripo` route — including the automatic tripo fallback that runs when `gemini_reference` is unavailable — have no locally recoverable task id and cannot enter this flow. Generate responses and progress files are anonymized the same way, so the only reachable input is a task id the user supplies from their own Tripo account. For skill-generated characters, rigging happens only inside the `gemini_reference` route's automatic server-side continuation.
+
 ## Non-negotiable rules
 
 - Stable biped pipeline: `animate_rig` then `animate_retarget`.
