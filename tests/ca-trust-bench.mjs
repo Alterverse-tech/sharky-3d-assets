@@ -4,15 +4,21 @@
 // and drives `game-assets-mcp.mjs readiness` against it.
 //
 // Scenarios:
-//   A. unknown CA, no override  -> must FAIL verification (proves cert
-//      checking stays on and the bundled anchor does not blanket-trust).
+//   A. unknown CA, no override  -> must FAIL verification with a TLS error
+//      (proves cert checking stays on and the bundled anchor does not
+//      blanket-trust).
 //   B. GAME_ASSETS_CA_FILE=<bench CA> -> must succeed (env override works).
 //   C. --ca-file <bench CA>          -> must succeed (flag override works).
 //   D. client source must not contain rejectUnauthorized (red line).
+//   E. bundled anchor must parse as >=1 currently-valid X509 certificate
+//      (a deleted/garbled/expired anchor file must fail the bench).
+//   F. NODE_EXTRA_CA_CERTS=<bench CA> -> must succeed (the explicit ca
+//      array must not drop Node's platform-level extra-trust mechanism).
 //
 // Usage: node tests/ca-trust-bench.mjs
 
 import { execFileSync, execFile } from "node:child_process";
+import { X509Certificate } from "node:crypto";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import https from "node:https";
 import os from "node:os";
@@ -73,9 +79,10 @@ await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const base = `https://127.0.0.1:${server.address().port}`;
 const benchCa = path.join(work, "ca.pem");
 
-// A. unknown CA must be rejected
+// A. unknown CA must be rejected, and for a TLS-verification reason
 const a = await runClient({ GAME_ASSETS_API_URL: base, GAME_ASSETS_CA_FILE: "" });
-record("A: unknown CA rejected", a.remote?.status === "unreachable", a.remote?.message?.slice(0, 80));
+const aTlsReason = /unable to verify|self.signed|unable to get|certificate/i.test(a.remote?.message || "");
+record("A: unknown CA rejected (TLS reason)", a.remote?.status === "unreachable" && aTlsReason, a.remote?.message?.slice(0, 80));
 
 // B. env override trusts the bench CA
 const b = await runClient({ GAME_ASSETS_API_URL: base, GAME_ASSETS_CA_FILE: benchCa });
@@ -88,6 +95,22 @@ record("C: --ca-file works", c.status === "ok" && c.remote?.status === "ok", c.r
 // D. red line: verification must never be disabled in the client source
 const source = readFileSync(clientPath, "utf8");
 record("D: no rejectUnauthorized in client", !/rejectUnauthorized/.test(source));
+
+// E. the bundled anchor itself must be structurally sound and in validity
+try {
+  const bundled = readFileSync(path.join(repoRoot, "shark-game-assets", "scripts", "certs", "asset-service-ca.pem"), "utf8");
+  const pems = bundled.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) || [];
+  const now = Date.now();
+  const parsed = pems.map((pem) => new X509Certificate(pem));
+  const allValid = parsed.length > 0 && parsed.every((cert) => Date.parse(cert.validFrom) <= now && now <= Date.parse(cert.validTo));
+  record("E: bundled anchor parses and is valid", allValid, parsed.map((cert) => cert.subject.split("\n").pop()).join(", ") || "no certs found");
+} catch (error) {
+  record("E: bundled anchor parses and is valid", false, error.message.slice(0, 80));
+}
+
+// F. NODE_EXTRA_CA_CERTS must keep working despite the explicit ca array
+const f = await runClient({ GAME_ASSETS_API_URL: base, GAME_ASSETS_CA_FILE: "", NODE_EXTRA_CA_CERTS: benchCa });
+record("F: NODE_EXTRA_CA_CERTS respected", f.status === "ok" && f.remote?.status === "ok", f.remote?.status);
 
 server.close();
 rmSync(work, { recursive: true, force: true });

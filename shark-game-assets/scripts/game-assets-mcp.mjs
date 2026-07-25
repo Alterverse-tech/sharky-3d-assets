@@ -25,16 +25,41 @@ let cachedHttpsAgent;
 
 function getHttpsAgent() {
   if (!cachedHttpsAgent) {
+    const anchors = [];
     const explicit = extraCaFile.trim();
-    let extraCerts = [];
-    try {
-      extraCerts = [readFileSync(explicit || BUNDLED_CA_FILE, "utf8")];
-    } catch (error) {
-      if (explicit) throw new Error(`Cannot read CA file ${explicit}: ${error.message}`);
+    if (explicit) {
+      try {
+        anchors.push(readFileSync(explicit, "utf8"));
+      } catch (error) {
+        throw new Error(`Cannot read CA file ${explicit}: ${error.message}`);
+      }
     }
-    cachedHttpsAgent = new https.Agent({ keepAlive: true, ca: [...tls.rootCertificates, ...extraCerts] });
+    try {
+      anchors.push(readFileSync(BUNDLED_CA_FILE, "utf8"));
+    } catch {
+      process.stderr.write(`[game-assets] Bundled CA anchor ${BUNDLED_CA_FILE} could not be read; continuing with default trust only.\n`);
+    }
+    cachedHttpsAgent = new https.Agent({ keepAlive: true, ca: [...defaultCaCertificates(), ...anchors] });
   }
   return cachedHttpsAgent;
+}
+
+// An explicit `ca` array bypasses Node's implicit NODE_EXTRA_CA_CERTS handling,
+// so the default set must be rebuilt to include it, not just tls.rootCertificates.
+function defaultCaCertificates() {
+  try {
+    return tls.getCACertificates("default");
+  } catch {
+    const roots = [...tls.rootCertificates];
+    if (process.env.NODE_EXTRA_CA_CERTS) {
+      try {
+        roots.push(readFileSync(process.env.NODE_EXTRA_CA_CERTS, "utf8"));
+      } catch {
+        // Node itself already warns about an unreadable NODE_EXTRA_CA_CERTS.
+      }
+    }
+    return roots;
+  }
 }
 
 const POLL_INTERVAL_MS = 3000;
@@ -832,11 +857,17 @@ async function fetchWithTimeout(url, init = {}, timeoutMs = HTTP_TIMEOUT_MS) {
     if (remaining <= 0) throw new Error(`Request to ${url} timed out after ${Math.round(timeoutMs / 1000)}s`);
     const response = await requestOnce(currentUrl, { method, body, headers }, remaining, url, timeoutMs);
     if ([301, 302, 303, 307, 308].includes(response.status) && response.headers.location) {
+      const previousOrigin = new URL(currentUrl).origin;
       currentUrl = new URL(response.headers.location, currentUrl).toString();
       if (response.status !== 307 && response.status !== 308) {
         method = "GET";
         body = undefined;
         headers = {};
+      } else if (new URL(currentUrl).origin !== previousOrigin) {
+        // Match fetch semantics: credentials never follow a cross-origin redirect.
+        headers = Object.fromEntries(
+          Object.entries(headers).filter(([key]) => !/^(authorization|proxy-authorization|cookie)$/i.test(key))
+        );
       }
       continue;
     }
