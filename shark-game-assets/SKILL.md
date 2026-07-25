@@ -84,7 +84,7 @@ Default asset-preview checklist:
 
 ## Route choice
 
-Use `tripo` for the fast route: direct text prompt to Tripo3D text-to-model. This is best for generic props, enemies, collectibles, vehicles, obstacles, and fast iteration. A tripo-route GLB is delivered static and stays static: the local manifest carries no Tripo task id (the client strips provider task ids during anonymization), while the rig/retarget flow requires `originalModelTaskId`, so a tripo-route GLB cannot enter the `tripo-rig-clip` flow afterwards. Rigged characters with retarget clips come only from the `gemini_reference` route completing its server-side rig stage.
+Use `tripo` for the fast route: direct text prompt to Tripo3D text-to-model. This is best for generic props, enemies, collectibles, vehicles, obstacles, and fast iteration. A tripo-route GLB is delivered static and stays static: the local manifest carries no Tripo task id (the client strips provider task ids during anonymization), while the rig/retarget flow requires `originalModelTaskId`, so a tripo-route GLB cannot enter the `tripo-rig-clip` flow afterwards. For skill-generated assets, rigged characters with retarget clips come only from the `gemini_reference` route completing its server-side rig stage; separately, a Tripo task id the user supplies from their own account can enter the `tripo-rig-clip` flow directly.
 
 Use `gemini_reference` when visual control matters; this is the Gemini-Tripo branch when the user describes it that way. Gemini first creates a pure-white-background reference image, then Tripo image-to-model creates the GLB. For `assetKind: "character"` or `"creature"`, this route must continue into the `tripo-rig-clip` flow so the final manifest contains a rigged main GLB plus default `idle` and `walk` animation support. Prefer this route when the user mentions Gemini, Nano Banana, T-pose, white background, reference image, image-to-model, character sheet, style consistency, or when a key character's silhouette must be controlled.
 
@@ -491,7 +491,7 @@ Use the bundled subskill [tripo-rig-clip](subskills/tripo-rig-clip.md) when the 
 ## Failure handling
 
 - Remote call blocked by policy or asset API unreachable: report that the asset service is temporarily unavailable. Do not ask for credentials and never silently substitute placeholders for requested GLB generation.
-- Gemini reference generation unavailable: the client retries the same assets once through `tripo`, then reports a concise failure if that also fails. GLBs delivered through this tripo fallback are static like any tripo-route GLB: the local manifest carries no task id, the rig/retarget flow cannot be applied to them afterwards, and character/creature assets arrive without a skeleton or retarget clips (runtime animation falls back to procedural/group animation).
+- Gemini reference generation unavailable: the client retries the same assets once through `tripo`, then reports a concise failure if that also fails. GLBs delivered through this tripo fallback are static like any tripo-route GLB (see Route choice for the task-id mechanism): character/creature assets arrive without a skeleton or retarget clips, and runtime animation falls back to procedural/group animation.
 - Zero Tripo balance: do not retry in a loop. Keep fallbacks and record the skipped stage in the README.
 - Partial success: use generated assets that succeeded and fallback geometry for the rest.
 - Portal `401`: stop and ask for a valid `SHARK_PORTAL_TOKEN`.
