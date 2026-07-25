@@ -2,13 +2,40 @@
 // Thin MCP client: speaks MCP (JSON-RPC over stdio) to the host CLI, and plain HTTPS
 // to the remote asset-generation API. No local repo dependency, no API keys on the user machine.
 import { mkdir, readFile, writeFile, access, stat } from "node:fs/promises";
+import { readFileSync } from "node:fs";
+import http from "node:http";
+import https from "node:https";
 import path from "node:path";
+import tls from "node:tls";
+import { fileURLToPath } from "node:url";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const SERVER_INFO = { name: "game_assets", version: "0.4.0" };
 
 const DEFAULT_API_BASE = "https://studio.13-216-49-19.sslip.io";
 const API_BASE = (process.env.GAME_ASSETS_API_URL || DEFAULT_API_BASE).replace(/\/$/, "");
+
+// The default endpoint's Let's Encrypt chain (newer ISRG hierarchy) fails path
+// building against Node's compiled-in root store, so a bundled anchor is
+// appended to — never substituted for — the default roots. Certificate
+// verification itself is never relaxed.
+const BUNDLED_CA_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "certs", "asset-service-ca.pem");
+let extraCaFile = process.env.GAME_ASSETS_CA_FILE || "";
+let cachedHttpsAgent;
+
+function getHttpsAgent() {
+  if (!cachedHttpsAgent) {
+    const explicit = extraCaFile.trim();
+    let extraCerts = [];
+    try {
+      extraCerts = [readFileSync(explicit || BUNDLED_CA_FILE, "utf8")];
+    } catch (error) {
+      if (explicit) throw new Error(`Cannot read CA file ${explicit}: ${error.message}`);
+    }
+    cachedHttpsAgent = new https.Agent({ keepAlive: true, ca: [...tls.rootCertificates, ...extraCerts] });
+  }
+  return cachedHttpsAgent;
+}
 
 const POLL_INTERVAL_MS = 3000;
 const GENERATE_TIMEOUT_MS = 840000;
@@ -141,6 +168,8 @@ const TOOL_DEFINITIONS = [
 // CLI mode: `node game-assets-mcp.mjs readiness --cwd <dir>` or
 // `node game-assets-mcp.mjs generate --cwd <dir> --params '<json>'` or
 // `node game-assets-mcp.mjs animate --cwd <dir> --params '<json>'`.
+// Optional on every command: `--ca-file <pem>` (or GAME_ASSETS_CA_FILE) to
+// append extra trust anchors; defaults to the bundled certs/asset-service-ca.pem.
 // Lets skill-only installs (npx skills add) drive the client via Bash without MCP registration.
 const cliCommand = process.argv[2];
 if (cliCommand === "readiness" || cliCommand === "generate" || cliCommand === "animate") {
@@ -162,7 +191,9 @@ async function runCli(command, argv) {
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--cwd") flags.cwd = argv[++i];
     else if (argv[i] === "--params") flags.params = argv[++i];
+    else if (argv[i] === "--ca-file") flags.caFile = argv[++i];
   }
+  if (flags.caFile) extraCaFile = flags.caFile;
   if (command === "readiness") return checkReadiness({ cwd: flags.cwd });
   let params;
   try {
@@ -788,19 +819,70 @@ async function apiDownload(downloadPath) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-async function fetchWithTimeout(url, init, timeoutMs = HTTP_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } catch (error) {
-    if (error && error.name === "AbortError") {
-      throw new Error(`Request to ${url} timed out after ${Math.round(timeoutMs / 1000)}s`);
+// node:http(s) instead of global fetch: undici exposes no zero-dependency CA
+// hook, and the appended-anchor agent above must apply to every remote call.
+async function fetchWithTimeout(url, init = {}, timeoutMs = HTTP_TIMEOUT_MS) {
+  const deadline = Date.now() + timeoutMs;
+  let currentUrl = url;
+  let method = init.method || "GET";
+  let body = init.body;
+  let headers = init.headers || {};
+  for (let hop = 0; hop < 6; hop++) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new Error(`Request to ${url} timed out after ${Math.round(timeoutMs / 1000)}s`);
+    const response = await requestOnce(currentUrl, { method, body, headers }, remaining, url, timeoutMs);
+    if ([301, 302, 303, 307, 308].includes(response.status) && response.headers.location) {
+      currentUrl = new URL(response.headers.location, currentUrl).toString();
+      if (response.status !== 307 && response.status !== 308) {
+        method = "GET";
+        body = undefined;
+        headers = {};
+      }
+      continue;
     }
-    throw error;
-  } finally {
-    clearTimeout(timer);
+    return response;
   }
+  throw new Error(`Too many redirects for ${url}`);
+}
+
+function requestOnce(urlString, init, timeoutMs, originalUrl, originalTimeoutMs) {
+  return new Promise((resolve, reject) => {
+    const target = new URL(urlString);
+    const lib = target.protocol === "http:" ? http : https;
+    const request = lib.request(
+      target,
+      {
+        method: init.method,
+        headers: init.headers,
+        ...(target.protocol === "https:" ? { agent: getHttpsAgent() } : {})
+      },
+      (response) => {
+        const chunks = [];
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.on("error", reject);
+        response.on("end", () => {
+          const buffered = Buffer.concat(chunks);
+          resolve({
+            ok: response.statusCode >= 200 && response.statusCode < 300,
+            status: response.statusCode,
+            headers: response.headers,
+            text: async () => buffered.toString("utf8"),
+            arrayBuffer: async () => buffered.buffer.slice(buffered.byteOffset, buffered.byteOffset + buffered.byteLength)
+          });
+        });
+      }
+    );
+    const timer = setTimeout(() => {
+      request.destroy(new Error(`Request to ${originalUrl} timed out after ${Math.round(originalTimeoutMs / 1000)}s`));
+    }, timeoutMs);
+    request.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    request.on("close", () => clearTimeout(timer));
+    if (init.body) request.write(init.body);
+    request.end();
+  });
 }
 
 function normalizeAssets(value, route) {

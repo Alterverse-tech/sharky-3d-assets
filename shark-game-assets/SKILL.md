@@ -95,6 +95,7 @@ Use `auto` only when you are comfortable with the server choosing from the promp
 The generation client is bundled with this skill at `scripts/game-assets-mcp.mjs` (Node >= 20, zero dependencies). It talks anonymously to the default public asset API at `https://studio.13-216-49-19.sslip.io`.
 
 - `GAME_ASSETS_API_URL` — optional override for the asset API base URL
+- `GAME_ASSETS_CA_FILE` — optional extra TLS trust-anchor PEM; the client appends it (or the bundled `scripts/certs/asset-service-ca.pem` by default) to Node's default root store. The default endpoint's certificate chain fails Node's compiled-in store without this anchor; certificate verification is never disabled.
 - `SHARK_PORTAL_URL` — required only when publishing a completed game; the Coding Agent portal base URL
 - `SHARK_PORTAL_TOKEN` — required only when publishing; a least-privilege portal upload token
 
