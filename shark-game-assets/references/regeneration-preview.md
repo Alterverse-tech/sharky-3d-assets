@@ -40,7 +40,7 @@ Create a fresh plan before every asset generation, animation, rigging, or integr
       "id": "detective-player",
       "name": "Detective Player",
       "role": "player",
-      "actions": ["idle", "walk"]
+      "actions": ["walk"]
     },
     {
       "id": "brass-key",
@@ -56,6 +56,7 @@ Rules:
 
 - Keep ids stable, unique, and kebab-case.
 - List semantic actions explicitly. Do not infer them from filenames.
+- Default animated characters list only `walk`; list `idle`, `run`, or `jump` only when explicitly requested or already present in a compatible historical manifest. Runtime procedural idle has no GLB action slot.
 - Use `startedAt` to exclude stale job/manifest files from an older run.
 - Keep base models in `items`; keep action GLBs in each item's `actions`/derived `clips`.
 
@@ -68,7 +69,7 @@ The synchronizer writes:
   "status": "running",
   "runId": "blood-moon-20260710-01",
   "updatedAt": "2026-07-10T13:45:00.000Z",
-  "message": "2 个基础模型：1 可预览、1 生成中、0 失败；2 个动作模型：1 可预览、1 生成中、0 失败。",
+  "message": "2 个基础模型：1 可预览、1 生成中、0 失败；1 个动作模型：1 可预览、0 生成中、0 失败。",
   "items": [
     {
       "id": "detective-player",
@@ -79,10 +80,10 @@ The synchronizer writes:
       "runtimeUrl": "/generated-assets/detective-player.glb",
       "clips": [
         {
-          "name": "idle",
+          "name": "walk",
           "status": "ready",
           "progress": 100,
-          "runtimeUrl": "/generated-assets/detective-player-idle.glb",
+          "runtimeUrl": "/generated-assets/detective-player-walk.glb",
           "error": ""
         }
       ],

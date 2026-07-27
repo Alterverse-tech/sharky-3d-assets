@@ -71,8 +71,10 @@ const VALID_ROLES = ["player", "collectible", "hazard", "prop", "vehicle", "envi
 const VALID_KINDS = ["character", "creature", "prop", "vehicle", "environment"];
 const ROUTES = ["auto", "tripo", "gemini_reference"];
 const BIPED_RIG_CLIPS = ["preset:biped:idle", "preset:biped:walk", "preset:biped:run", "preset:biped:jump"];
-const DEFAULT_BIPED_RIG_CLIPS = ["preset:biped:idle", "preset:biped:walk"];
+const DEFAULT_BIPED_RIG_CLIPS = ["preset:biped:walk"];
 const DEFAULT_RIG_MODEL_VERSION = "v1.0-20240301";
+const ASSET_PROMPT_RULE =
+  'Write concise English asset prompts describing the subject, identity-defining shape, proportions, materials, colors, and gameplay role. Preserve the visual style from the user or game specification. Do not add "simple", "low-poly", "stylized", or "cartoon" unless that style was requested. Favor a single fully visible subject, readable silhouette, clean separation of major forms, and no background, text, logo, watermark, unrelated props, duplicate parts, or extra characters.';
 
 const TOOL_DEFINITIONS = [
   {
@@ -123,7 +125,7 @@ const TOOL_DEFINITIONS = [
               id: { type: "string" },
               role: { type: "string", enum: VALID_ROLES },
               name: { type: "string" },
-              prompt: { type: "string" },
+              prompt: { type: "string", description: ASSET_PROMPT_RULE },
               assetKind: {
                 type: "string",
                 enum: VALID_KINDS,
@@ -144,7 +146,7 @@ const TOOL_DEFINITIONS = [
   {
     name: "generate_tripo_rig_clips",
     description:
-      "Animate an existing Tripo GLB task into rigged biped GLB clips. Uses Tripo rig v1.0-20240301 by default and never sends multiple retarget presets in one request. Defaults to idle and walk; run and jump require explicit selection. If retarget fails after rigging, the API may embed procedural Idle/Walk clips in the main GLB.",
+      "Animate an existing Tripo GLB task into rigged biped GLB clips. Uses Tripo rig v1.0-20240301 by default and never sends multiple retarget presets in one request. Defaults to walk only; idle, run, and jump require explicit selection. If retarget fails after rigging, the API may embed a procedural Walk clip in the main GLB; idle is runtime procedural motion.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -174,7 +176,7 @@ const TOOL_DEFINITIONS = [
           type: "array",
           items: { type: "string", enum: BIPED_RIG_CLIPS },
           description:
-            "Optional biped presets. Omit to generate required idle and walk. If multiple presets are provided, this client splits them into separate /animate calls."
+            "Optional biped presets. Omit to generate walk only. If multiple presets are provided, this client splits them into separate /animate calls."
         },
         spec: {
           type: "string",
@@ -262,7 +264,7 @@ async function handleMessage(message) {
       capabilities: { tools: {} },
       serverInfo: SERVER_INFO,
       instructions:
-        "Use this server only for key GLB assets in 3D games. Pass cwd as the current project directory. Generate 1-3 essential assets, reuse asset_manifest.json by default, and keep primitive fallbacks. The gemini_reference route automatically rigs character/creature GLBs; retarget success returns separate animationClips and retarget failure may return main-GLB procedural_native_clips. For existing-GLB animation, Tripo retarget must be one preset per request; default biped clips are idle and walk, optional clips are run and jump, and each successful retarget clip should be recorded as a separate animationClips GLB."
+        "Use this server only for key GLB assets in 3D games. Pass cwd as the current project directory. Generate 1-3 essential assets, reuse asset_manifest.json by default, and keep primitive fallbacks. The gemini_reference route automatically rigs character/creature GLBs; retarget success returns separate animationClips and retarget failure may return main-GLB procedural_native_clips. For existing-GLB animation, Tripo retarget must be one preset per request; the default biped clip is walk only, idle/run/jump are explicit options, and each successful retarget clip should be recorded as a separate animationClips GLB. Runtime idle belongs on the character visual child, not in the default GLB."
     });
     return;
   }
@@ -452,7 +454,7 @@ async function generateRigClips(args) {
 
   const callPlans = requestedAnimations
     ? requestedAnimations.map((preset) => ({ animations: [preset], preset }))
-    : [{ animations: undefined, preset: DEFAULT_BIPED_RIG_CLIPS.join(",") }];
+    : [{ animations: DEFAULT_BIPED_RIG_CLIPS, preset: DEFAULT_BIPED_RIG_CLIPS.join(",") }];
 
   const responses = [];
   for (const plan of callPlans) {

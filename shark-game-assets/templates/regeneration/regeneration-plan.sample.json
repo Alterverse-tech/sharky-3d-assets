@@ -7,7 +7,7 @@
       "id": "sample-player",
       "name": "示例角色",
       "role": "player",
-      "actions": ["idle", "walk"]
+      "actions": ["walk"]
     },
     {
       "id": "sample-prop",

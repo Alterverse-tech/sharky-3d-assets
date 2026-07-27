@@ -35,20 +35,60 @@ try {
     runId: "test-run",
     startedAt,
     items: [
-      { id: "sample-player", name: "Sample Player", role: "player", actions: ["idle", "walk"] },
+      { id: "sample-player", name: "Sample Player", role: "player", actions: ["walk"] },
       { id: "sample-prop", name: "Sample Prop", role: "prop", actions: [] }
     ]
   }, null, 2)}\n`);
   await mkdir(path.join(fixture, "public", "generated-assets"), { recursive: true });
   await writeFile(path.join(fixture, "public", "generated-assets", "sample-player.glb"), Buffer.from("base-glb"));
-  await writeFile(path.join(fixture, "public", "generated-assets", "sample-player-idle.glb"), Buffer.from("idle-glb"));
   await writeFile(path.join(fixture, "asset-jobs.json"), `${JSON.stringify({
     jobId: "job-test",
     status: "running",
     updatedAt: new Date().toISOString(),
     jobs: [
-      { id: "sample-player", label: "Sample Player", status: "success", progress: 100, rig: { status: "success", progress: 100, animationClips: [{ name: "idle", status: "success" }, { name: "walk", status: "success" }] } },
+      { id: "sample-player", label: "Sample Player", status: "success", progress: 100, rig: { status: "success", progress: 100, animationClips: [{ name: "walk", status: "success" }] } },
       { id: "sample-prop", label: "Sample Prop", status: "running", progress: 37 }
+    ]
+  }, null, 2)}\n`);
+  await writeFile(path.join(fixture, "asset_manifest.json"), `${JSON.stringify({
+    version: 2,
+    assets: [{
+      id: "sample-player",
+      name: "Sample Player",
+      model: { url: "/generated-assets/sample-player.glb" },
+      actions: {
+        walk: { url: "/generated-assets/sample-player-walk.glb" }
+      }
+    }]
+  }, null, 2)}\n`);
+
+  run("sync-regeneration-status.mjs");
+  let status = JSON.parse(await readFile(path.join(fixture, "public", "regeneration-status.json"), "utf8"));
+  const player = status.items.find((item) => item.id === "sample-player");
+  const prop = status.items.find((item) => item.id === "sample-prop");
+  assert.equal(player.status, "ready");
+  assert.equal(player.clips.some((clip) => clip.name === "idle"), false);
+  assert.equal(player.clips.find((clip) => clip.name === "walk").status, "running");
+  assert.equal(player.clips.find((clip) => clip.name === "walk").progress, 99);
+  assert.equal(prop.status, "running");
+  assert.equal(prop.progress, 37);
+  run("validate-regeneration-preview.mjs");
+
+  await writeFile(path.join(fixture, "public", "generated-assets", "sample-player-walk.glb"), Buffer.from("walk-glb"));
+  run("sync-regeneration-status.mjs");
+  status = JSON.parse(await readFile(path.join(fixture, "public", "regeneration-status.json"), "utf8"));
+  assert.equal(status.items.find((item) => item.id === "sample-player").clips.find((clip) => clip.name === "walk").status, "ready");
+  run("validate-regeneration-preview.mjs");
+
+  // Explicit/historical idle clips remain previewable even though new default plans are walk-only.
+  await writeFile(path.join(fixture, "public", "generated-assets", "sample-player-idle.glb"), Buffer.from("idle-glb"));
+  await writeFile(path.join(fixture, "regeneration-plan.json"), `${JSON.stringify({
+    version: 1,
+    runId: "explicit-idle-run",
+    startedAt,
+    items: [
+      { id: "sample-player", name: "Sample Player", role: "player", actions: ["idle", "walk"] },
+      { id: "sample-prop", name: "Sample Prop", role: "prop", actions: [] }
     ]
   }, null, 2)}\n`);
   await writeFile(path.join(fixture, "asset_manifest.json"), `${JSON.stringify({
@@ -63,23 +103,9 @@ try {
       }
     }]
   }, null, 2)}\n`);
-
-  run("sync-regeneration-status.mjs");
-  let status = JSON.parse(await readFile(path.join(fixture, "public", "regeneration-status.json"), "utf8"));
-  const player = status.items.find((item) => item.id === "sample-player");
-  const prop = status.items.find((item) => item.id === "sample-prop");
-  assert.equal(player.status, "ready");
-  assert.equal(player.clips.find((clip) => clip.name === "idle").status, "ready");
-  assert.equal(player.clips.find((clip) => clip.name === "walk").status, "running");
-  assert.equal(player.clips.find((clip) => clip.name === "walk").progress, 99);
-  assert.equal(prop.status, "running");
-  assert.equal(prop.progress, 37);
-  run("validate-regeneration-preview.mjs");
-
-  await writeFile(path.join(fixture, "public", "generated-assets", "sample-player-walk.glb"), Buffer.from("walk-glb"));
   run("sync-regeneration-status.mjs");
   status = JSON.parse(await readFile(path.join(fixture, "public", "regeneration-status.json"), "utf8"));
-  assert.equal(status.items.find((item) => item.id === "sample-player").clips.find((clip) => clip.name === "walk").status, "ready");
+  assert.equal(status.items.find((item) => item.id === "sample-player").clips.find((clip) => clip.name === "idle").status, "ready");
   run("validate-regeneration-preview.mjs");
 
   const watcher = spawn(process.execPath, [path.join(scriptDir, "sync-regeneration-status.mjs"), "--cwd", fixture, "--watch", "--interval", "100"], { stdio: "ignore" });
@@ -89,7 +115,7 @@ try {
       runId: "hot-reload-run",
       startedAt,
       items: [
-        { id: "sample-player", name: "Sample Player", role: "player", actions: ["idle", "walk"] },
+        { id: "sample-player", name: "Sample Player", role: "player", actions: ["walk"] },
         { id: "sample-prop", name: "Sample Prop", role: "prop", actions: [] },
         { id: "sample-extra", name: "Sample Extra", role: "prop", actions: [] }
       ]
@@ -111,7 +137,7 @@ try {
   assert.doesNotMatch(html, /\?v=template/);
   const leftovers = (await readdir(path.join(fixture, "public"))).filter((name) => name.includes(".tmp"));
   assert.deepEqual(leftovers, []);
-  process.stdout.write(`${JSON.stringify({ status: "ok", fixture, assertions: 19 }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ status: "ok", fixture, assertions: 20 }, null, 2)}\n`);
 } finally {
   if (!process.env.KEEP_REGENERATION_TEST_FIXTURE) await rm(fixture, { recursive: true, force: true });
 }

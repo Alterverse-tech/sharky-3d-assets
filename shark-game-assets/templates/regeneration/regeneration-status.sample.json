@@ -13,13 +13,6 @@
       "runtimeUrl": "",
       "clips": [
         {
-          "name": "idle",
-          "status": "pending",
-          "progress": 0,
-          "runtimeUrl": "",
-          "error": ""
-        },
-        {
           "name": "walk",
           "status": "pending",
           "progress": 0,

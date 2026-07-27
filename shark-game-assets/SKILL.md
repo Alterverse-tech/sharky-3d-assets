@@ -24,6 +24,7 @@ Before taking task actions with this skill, perform a best-effort self-update ch
 - Skip the default preview only for publish-only requests, help/explanation-only requests, readiness-only or other read-only inspection that does not generate/integrate asset files, or when the user explicitly declines a preview page.
 - If the game prompt contains explicit or implicit entities, such as a player, character, enemy, collectible, vehicle, weapon, obstacle, boss, mascot, key prop, or environment object, GLB generation is a required stage when the tool is available.
 - Generate only 1-3 key assets by default. Prioritize the player/main character first, then the gameplay-critical enemy, collectible, vehicle, hazard, or key prop. Do not generate decorative filler.
+- Write concise English asset prompts describing the subject, identity-defining shape, proportions, materials, colors, and gameplay role. Preserve the visual style from the user or game specification. Do not add "simple", "low-poly", "stylized", or "cartoon" unless that style was requested. Favor a single fully visible subject, readable silhouette, clean separation of major forms, and no background, text, logo, watermark, unrelated props, duplicate parts, or extra characters.
 - When the user explicitly asks to regenerate a game and says not to reuse historical assets, do not reuse existing GLBs from `asset_manifest.json`; create fresh stable ids, usually with a timestamp or run suffix, and pass `force: true`.
 - For regeneration work with concrete characters or critical entity props, use the Gemini-Tripo branch (`route: "gemini_reference"`) for those key assets and keep that set to 1-5 models total. If the client/API batch cap is lower than the requested total, split into multiple generate calls.
 - For secondary static props that do not need strong visual control or rigged animation, use the faster Tripo branch (`route: "tripo"`) and keep that set to 3-10 models total. Do not include decorative filler just to reach the lower bound.
@@ -66,7 +67,7 @@ node <skill-dir>/scripts/sync-regeneration-status.mjs --cwd "$(pwd)" --watch --i
 node <skill-dir>/scripts/validate-regeneration-preview.mjs --cwd "$(pwd)"
 ```
 - Back the page with derived status JSON at `public/regeneration-status.json`, containing per-asset `id`, `name`, `role`, `status`, `progress`, `runtimeUrl`, `clips`, and `error`. Keep the synchronizer running throughout generation so the page can poll and refresh without browser automation.
-- The status JSON should make semantic model state visible, not just raw file completion. For animated character/creature assets, list the base model and each semantic action GLB separately or expose them in `clips`, for example player base, player `idle`, player `walk`, boss base, boss `idle`, boss `walk`. This helps users and Codex verify that the correct action GLB is used at the correct gameplay state.
+- The status JSON should make semantic model state visible, not just raw file completion. For default animated character/creature assets, list the base model and `walk` GLB separately or expose it in `clips`, for example player base/player `walk` and boss base/boss `walk`. Add `idle`, `run`, or `jump` slots only when explicitly requested or already present in a compatible historical manifest.
 - During generation, derive each status item from `pending` to `running` to `ready` or `failed`, with progress and a clear error if one stage fails. Server-side `success` without a local runtime GLB stays `running` at no more than 99%; only a non-empty file under `public/generated-assets/` may become `ready`.
 - As each GLB completes, copy it into the runtime `public/generated-assets/` tree, set `runtimeUrl`, and make it available in the live preview before the full batch is complete.
 - On completion, update `asset_manifest.json`, game asset constants/import paths, and the preview status so they list the assets/actions actually used by the current task. For explicit no-reuse regeneration, this set must contain only fresh current-run GLBs.
@@ -86,7 +87,7 @@ Default asset-preview checklist:
 
 Use `tripo` for the fast route: direct text prompt to Tripo3D text-to-model. This is best for generic props, enemies, collectibles, vehicles, obstacles, and fast iteration. A tripo-route GLB is delivered static and stays static: the local manifest carries no Tripo task id (the client strips provider task ids during anonymization), while the rig/retarget flow requires `originalModelTaskId`, so a tripo-route GLB cannot enter the `tripo-rig-clip` flow afterwards. For skill-generated assets, rigged characters with retarget clips come only from the `gemini_reference` route completing its server-side rig stage; separately, a Tripo task id the user supplies from their own account can enter the `tripo-rig-clip` flow directly.
 
-Use `gemini_reference` when visual control matters; this is the Gemini-Tripo branch when the user describes it that way. Gemini first creates a pure-white-background reference image, then Tripo image-to-model creates the GLB. For `assetKind: "character"` or `"creature"`, this route must continue into the `tripo-rig-clip` flow so the final manifest contains a rigged main GLB plus default `idle` and `walk` animation support. Prefer this route when the user mentions Gemini, Nano Banana, T-pose, white background, reference image, image-to-model, character sheet, style consistency, or when a key character's silhouette must be controlled.
+Use `gemini_reference` when visual control matters; this is the Gemini-Tripo branch when the user describes it that way. Gemini first creates a pure-white-background reference image, then Tripo image-to-model creates the GLB. For `assetKind: "character"` or `"creature"`, this route must continue into the `tripo-rig-clip` flow so the final manifest contains a rigged main GLB plus default `walk` animation support; idle is runtime procedural motion. Prefer this route when the user mentions Gemini, Nano Banana, T-pose, white background, reference image, image-to-model, character sheet, style consistency, or when a key character's silhouette must be controlled.
 
 Use `auto` only when you are comfortable with the server choosing from the prompt. If in doubt, choose the route yourself and pass it explicitly.
 
@@ -126,7 +127,7 @@ Explicit skill invocation examples:
 ```
 
 ```md
-[$shark-game-assets](/Users/cppeng/Documents/study/.agents/skills/shark-game-assets/SKILL.md) 请给这个已有角色 GLB 自动 rig，并生成 idle 和 walk 动作 clips。每个动作单独输出 GLB，不要把多个 retarget preset 合并成一次请求。
+[$shark-game-assets](/Users/cppeng/Documents/study/.agents/skills/shark-game-assets/SKILL.md) 请给这个已有角色 GLB 自动 rig，默认只生成 walk 动作 clip；idle 使用运行时程序动画。
 ```
 
 Natural-language trigger examples that do not explicitly name the skill:
@@ -144,7 +145,7 @@ Natural-language trigger examples that do not explicitly name the skill:
 ```
 
 ```md
-请用 Gemini 先为我描述的角色生成白底参考图，再用 Tripo 生成游戏角色 GLB。角色需要清晰轮廓、T-pose、可用于 Three.js，并带 idle/walk 动作。
+请用 Gemini 先为我描述的角色生成白底参考图，再用 Tripo 生成游戏角色 GLB。角色需要清晰轮廓、T-pose、可用于 Three.js，并带 walk 动作；idle 使用运行时程序动画。
 ```
 
 ## Asset tool workflow
@@ -185,7 +186,7 @@ node <skill-dir>/scripts/game-assets-mcp.mjs generate --cwd "$(pwd)" --params '{
 
    - `route`: `tripo`, `gemini_reference`, or `auto`.
    - `assets`: objects with stable kebab-case `id`, `role`, `name`, `prompt`, and optionally `assetKind`; keep counts within the default or regeneration-specific limits.
-   - On `gemini_reference`, character/creature assets are automatically rigged after GLB generation. Prefer `animationClips` when present; if Tripo retarget failed, expect main-GLB fallback fields `animations: ["Idle", "Walk"]` and `animationSource: "procedural_native_clips"`.
+   - On `gemini_reference`, character/creature assets are automatically rigged after GLB generation. The default `animationClips` set contains only `walk`; if Tripo retarget failed, expect main-GLB fallback fields `animations: ["Walk"]` and `animationSource: "procedural_native_clips"`. A missing idle clip is normal.
    - `force`: only when the user explicitly asked to regenerate assets.
    - The command reports concise progress on stderr while polling (typically 1-3 minutes per batch), then prints JSON on stdout; exit code 1 means the batch failed.
 6. After the command returns, read `asset_manifest.json` from `cwd`. Treat that file as the source of truth and keep the preview synchronizer running until every successful local GLB/action appears.
@@ -244,7 +245,7 @@ Example `--params` JSON:
       "role": "player",
       "name": "Astronaut Cat",
       "assetKind": "character",
-      "prompt": "original low-poly astronaut cat hero, round helmet, compact readable silhouette, blue and white suit, friendly arcade game character"
+      "prompt": "original astronaut cat hero, round helmet, readable silhouette, blue and white suit, proportions matching the game specification, friendly arcade game character"
     },
     {
       "id": "energy-crystal",
@@ -301,14 +302,6 @@ Prefer this semantic registry shape for new or rewritten manifests:
         "status": "VISUALLY_VERIFIED"
       },
       "actions": {
-        "idle": {
-          "url": "/generated-assets/idle-task/model.glb",
-          "format": "glb",
-          "source": "tripo_retarget_clip",
-          "preset": "preset:biped:idle",
-          "loop": true,
-          "rootMotion": "none"
-        },
         "walk": {
           "url": "/generated-assets/walk-task/model.glb",
           "format": "glb",
@@ -319,14 +312,12 @@ Prefer this semantic registry shape for new or rewritten manifests:
         }
       },
       "actionAliases": {
-        "default": "idle",
-        "stand": "idle",
         "move": "walk",
         "moving": "walk"
       },
       "fallback": {
         "model": "primitive:humanoid",
-        "animation": "group-bob-tilt"
+        "animation": "runtime-visual-idle-and-group-movement"
       }
     }
   ]
@@ -336,7 +327,7 @@ Prefer this semantic registry shape for new or rewritten manifests:
 Manifest authoring rules:
 
 - `model.url` is the visible base model or base rig. It is not automatically the `idle`, `walk`, or `run` action.
-- `actions` is the primary action registry. Runtime code should resolve `walk` from `asset.actions.walk.url`, `idle` from `asset.actions.idle.url`, and so on.
+- `actions` is the primary action registry. New default character manifests should contain `walk` only and must not create `actions.idle` or aliases such as `default`/`stand` that point to a missing idle file. Explicit or historical idle actions remain readable.
 - `bindings` maps game slots to asset ids. Prefer `manifest.bindings.player` over searching for the first asset with `role: "player"` when a binding exists.
 - `role` and `gameplayRole` should describe game semantics such as `player`, `boss`, `npc`, `collectible`, or `hazard`. `assetKind` should describe asset form such as `character`, `creature`, `prop`, `vehicle`, or `environment`.
 - `orientation` records the independently audited native visual forward axis and the one-time calibration into the game's canonical forward axis. Do not write `VISUALLY_VERIFIED` or `ACCEPTED` unless the mandatory orientation gate below has passed at that level.
@@ -367,7 +358,7 @@ Standard animated character loading chain for retarget clips:
 1. Load the main character GLB with `GLTFLoader` from `getModelUrl(asset)`.
 2. Normalize and add the main character `gltf.scene` to the game scene.
 3. Create one `THREE.AnimationMixer` on the main character root.
-4. Load each action GLB with `GLTFLoader` from `getActionUrl(asset, "idle")`, `getActionUrl(asset, "walk")`, and any other required actions.
+4. Load the default walk action GLB with `GLTFLoader` from `getActionUrl(asset, "walk")`; load idle/run/jump only when explicitly present.
 5. Extract `THREE.AnimationClip`s from the action GLBs' `gltf.animations`; do not add those action GLB scenes to the game scene.
 6. Play those clips on the main character mixer, for example `mixer.clipAction(walkClip, mainRoot)`.
 7. Switch actions from game state and call `mixer.update(delta)` every frame.
@@ -376,20 +367,41 @@ Minimal Three.js shape:
 
 ```js
 const mainGltf = await loadGLB(getModelUrl(asset));
-const mainRoot = normalizeModel(mainGltf.scene);
-scene.add(mainRoot);
+const visualRoot = normalizeModel(mainGltf.scene);
+gameplayRoot.add(visualRoot);
 
-const mixer = new THREE.AnimationMixer(mainRoot);
-const idleGltf = await loadGLB(getActionUrl(asset, "idle"));
+const mixer = new THREE.AnimationMixer(visualRoot);
 const walkGltf = await loadGLB(getActionUrl(asset, "walk"));
+const walkAction = mixer.clipAction(walkGltf.animations[0], visualRoot);
 
-const idleAction = mixer.clipAction(idleGltf.animations[0], mainRoot);
-const walkAction = mixer.clipAction(walkGltf.animations[0], mainRoot);
+const idleBase = {
+  position: visualRoot.position.clone(),
+  rotation: visualRoot.rotation.clone(),
+  scale: visualRoot.scale.clone()
+};
+let idleWeight = 1;
+let idleDelay = 0;
 
-idleAction.play();
+function setMoving(moving) {
+  if (moving) {
+    idleDelay = 0;
+    walkAction.reset().fadeIn(0.18).play();
+  } else {
+    idleDelay = 0.18;
+    walkAction.fadeOut(0.18);
+  }
+}
 
-function tick(delta) {
+function tick(delta, elapsed, moving) {
   mixer.update(delta);
+  idleDelay = Math.max(0, idleDelay - delta);
+  idleWeight = THREE.MathUtils.damp(idleWeight, moving || idleDelay > 0 ? 0 : 1, 10, delta);
+  visualRoot.position.copy(idleBase.position);
+  visualRoot.rotation.copy(idleBase.rotation);
+  visualRoot.scale.copy(idleBase.scale);
+  visualRoot.position.y += Math.sin(elapsed * 2.1) * 0.012 * idleWeight;
+  visualRoot.rotation.z += Math.sin(elapsed * 1.25) * 0.01 * idleWeight;
+  visualRoot.scale.y *= 1 + Math.sin(elapsed * 2.1) * 0.004 * idleWeight;
 }
 ```
 
@@ -400,10 +412,10 @@ function tick(delta) {
 - If `manifest.assets` contains `rigged`, `rigType`, `actions`, `animationClips`, `animations`, or `animationSource`, inspect the loaded `gltf.animations` before claiming native animation exists.
 - For `animationSource: "tripo_retarget_clips"` or a character/creature asset with `actions`/`animationClips`, load the visible main model from `model.url` or legacy `url`, then separately load each action GLB from `actions.<name>.url` or legacy `animationClips[].url`. The action GLB scene is normally only a clip source and should not be added to the game scene.
 - Extract `THREE.AnimationClip`s from action GLBs and play them on the main model's root with one `THREE.AnimationMixer`, for example `mixer.clipAction(walkClip, mainRoot)`. This depends on the action GLB and main model sharing a compatible rig, which Tripo retarget clips for the same asset are expected to do.
-- If `animationSource` is `procedural_native_clips`, play the main GLB's embedded `Idle`/`Walk` clips directly and label them as procedural fallback clips, not Tripo retarget clips.
-- When native clips exist, create a `THREE.AnimationMixer`, map clips by case-insensitive substrings such as `idle`, `walk`, `run`, and `jump`, and call `mixer.update(delta)` every frame.
-- Drive action switching from game state: idle/stand states should play `idle`, movement should play `walk` or `run`, and jump/air states should play `jump` when available. Use cross-fades when changing between actions.
-- If no native clips exist, use whole-group bob/tilt/rotation or explicitly labeled procedural clips as fallback animation.
+- If `animationSource` is `procedural_native_clips`, play the main GLB's embedded `Walk` clip directly and label it as a procedural fallback clip, not a Tripo retarget clip. Older files that explicitly contain Idle remain compatible.
+- When native clips exist, create a `THREE.AnimationMixer`, map clips by case-insensitive substrings such as `idle`, `walk`, `run`, and `jump`, and call `mixer.update(delta)` every frame. Do not treat a missing idle clip as an error.
+- Default idle is runtime procedural motion on the character visual child only. After fading walk out, derive subtle breathing, vertical bob, and weight sway from saved base position/rotation/scale every frame; do not modify the gameplay root/collider or accumulate offsets. When movement starts, smoothly restore the idle offsets while fading walk in. When movement stops, fade walk out before enabling runtime idle.
+- If procedural Walk also cannot be generated, preserve the rigged/static GLB and use the existing whole-group movement fallback. Idle still uses the visual-child runtime motion above.
 - If a retarget clip does not bind to the main model's skeleton, fall back to a clearly labeled procedural/group fallback. Do not silently claim the main rig is playing that retarget clip. Clip GLBs downloaded by this client are normally stored animation-only (redundant meshes and textures are stripped; a clip that fails to parse is kept as delivered), so a displayable action scene usually does not exist; older locally cached clips may still contain one.
 - Add a short `README.md` section named `3D Asset Pipeline` or `3D 素材流水线` describing which assets were generated, which route was used, and what runtime animation source is used.
 

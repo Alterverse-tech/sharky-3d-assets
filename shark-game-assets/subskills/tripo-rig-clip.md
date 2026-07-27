@@ -21,9 +21,9 @@ Use this subskill when the user already has a GLB or Tripo model task and asks f
 - Never send multiple presets in a single `/animations/retarget` request. Do not send `animations: ["preset:biped:idle", "preset:biped:walk"]` directly to Tripo.
 - Tripo batch retarget can corrupt the second and later clips, often as arm crossing, center-line hand collapse, or exaggerated shoulder rotation. This is a Tripo retarget pipeline problem, not a GLB multi-clip limitation.
 - Store each retargeted clip as its own GLB. Do not merge clips into one GLB in this flow.
-- Default required biped clips are `preset:biped:idle` and `preset:biped:walk`.
-- Optional biped clips are only `preset:biped:run` and `preset:biped:jump`, and only when the user explicitly requests them.
-- If Tripo retarget returns `failed` for required `idle`/`walk` after rigging succeeds, keep the rigged GLB and use the server's local procedural fallback: embed conservative native `Idle` and `Walk` clips into the main GLB. This is a fallback for broken Tripo retarget, not a replacement for successful retarget clips.
+- The default required biped clip is `preset:biped:walk` only.
+- `preset:biped:idle`, `preset:biped:run`, and `preset:biped:jump` remain supported only when explicitly requested.
+- If Tripo retarget returns `failed` for required `walk` after rigging succeeds, keep the rigged GLB and use the server's local procedural fallback: embed a conservative native `Walk` clip into the main GLB. Idle remains runtime procedural motion and is never added by the fallback.
 
 ## Preferred client workflow
 
@@ -31,7 +31,7 @@ When the parent `generate` command uses `route: "gemini_reference"` for `assetKi
 
 Use the parent skill's bundled client. It calls the asset API and splits explicit multi-preset requests into one `/api/asset-jobs/animate` call per preset.
 
-For required default clips (`idle` + `walk`), omit `animations`:
+For the required default `walk` clip, omit `animations`. The client still sends `animations: ["preset:biped:walk"]` explicitly to protect against older servers whose omitted-parameter default included idle:
 
 ```bash
 node <skill-dir>/scripts/game-assets-mcp.mjs animate --cwd "$(pwd)" --params '{
@@ -73,7 +73,6 @@ The client writes or updates `asset_manifest.json`:
       "rigged": true,
       "rigType": "biped",
       "animationClips": [
-        { "name": "idle", "preset": "preset:biped:idle", "url": "/generated-assets/eleanor-blackwood-idle.glb", "format": "glb" },
         { "name": "walk", "preset": "preset:biped:walk", "url": "/generated-assets/eleanor-blackwood-walk.glb", "format": "glb" }
       ]
     }
@@ -96,9 +95,9 @@ If Tripo retarget fails after rigging, the output may instead be:
       "format": "glb",
       "rigged": true,
       "rigType": "biped",
-      "animations": ["Idle", "Walk"],
+      "animations": ["Walk"],
       "animationSource": "procedural_native_clips",
-      "rigError": "preset:biped:idle: Tripo retarget task failed; preset:biped:walk: Tripo retarget task failed"
+      "rigError": "preset:biped:walk: Tripo retarget task failed"
     }
   ]
 }
@@ -109,17 +108,18 @@ In this fallback shape, the main GLB itself contains the playable clips. Do not 
 ## Runtime wiring
 
 - Load the main rigged GLB with `GLTFLoader`.
-- Load each clip GLB separately, read its `gltf.animations`, and map clips by `name` / `preset` substrings such as `idle`, `walk`, `run`, `jump`.
-- If `animationSource` is `procedural_native_clips`, skip clip-GLB loading for that asset and use the main GLB's `gltf.animations` (`Idle`/`Walk`) directly.
+- Load each clip GLB separately, read its `gltf.animations`, and map clips by `name` / `preset` substrings such as `walk`, plus explicitly present `idle`, `run`, or `jump`.
+- If `animationSource` is `procedural_native_clips`, skip clip-GLB loading for that asset and use the main GLB's `Walk` animation directly.
 - Play clips on the main character with `THREE.AnimationMixer`.
 - Call `mixer.update(delta)` every frame.
-- If a clip GLB has no usable `gltf.animations`, keep the character playable and fall back to procedural bob/tilt only for that state.
+- Implement idle at runtime on the character visual child: fade walk out, apply subtle breathing, vertical bob, and weight sway from saved base transforms without touching the gameplay root/collider or accumulating offsets, then smoothly restore the offsets while fading walk in when movement starts.
+- If the Walk clip has no usable `gltf.animations`, keep the rigged/static model and use the existing whole-group movement fallback. Idle still uses the visual-child runtime motion.
 
 ## QA checklist
 
 - Confirm `asset_manifest.json` has separate `animationClips` entries, not one GLB claiming multiple generated clips.
-- Or, for retarget failure fallback, confirm `animationSource: "procedural_native_clips"` and main GLB `gltf.animations` contains `Idle` and `Walk`.
+- Or, for retarget failure fallback, confirm `animationSource: "procedural_native_clips"` and main GLB `gltf.animations` contains `Walk` only.
 - Inspect each generated GLB's `gltf.animations.length`.
-- Visually test idle and walk first. Test run/jump only if explicitly generated.
+- Visually test runtime idle and the walk clip first. Test explicit idle/run/jump clips only if generated.
 - Watch for hand crossing, wrist collapse, shoulder over-rotation, foot sliding, and root motion drift.
 - If a clip is malformed, regenerate that single preset only. Do not retry a batch retarget request.
