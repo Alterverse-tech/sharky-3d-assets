@@ -94,13 +94,33 @@ if (argv.includes("--reset-status") || planCreated || !(await exists(statusFile)
   await writeFile(statusFile, `${JSON.stringify(initialStatus, null, 2)}\n`, "utf8");
 }
 
-const esbuild = await findEsbuild();
-const result = spawnSync(esbuild, [sourceFile, "--bundle", "--format=iife", "--platform=browser", "--target=es2020", `--outfile=${bundleFile}`], {
-  cwd,
-  encoding: "utf8",
-  stdio: "pipe"
-});
-if (result.status !== 0) throw new Error(`esbuild failed:\n${result.stderr || result.stdout}`);
+// Prefer a project-local esbuild (covers customized viewer sources); fall
+// back to the prebuilt bundle shipped with the skill so dependency-free
+// checkouts never need a bundler toolchain (issue #10).
+const prebuiltBundle = path.join(templateDir, "regeneration-preview.bundle.js");
+let bundleSource = "esbuild";
+let esbuild;
+try {
+  esbuild = await findEsbuild();
+} catch (error) {
+  if (!(await exists(prebuiltBundle))) throw error;
+  bundleSource = "prebuilt";
+}
+if (bundleSource === "esbuild") {
+  const result = spawnSync(esbuild, [sourceFile, "--bundle", "--format=iife", "--platform=browser", "--target=es2020", `--outfile=${bundleFile}`], {
+    cwd,
+    encoding: "utf8",
+    stdio: "pipe"
+  });
+  if (result.status !== 0 || result.error) {
+    // A broken local esbuild (present but failing) also falls back.
+    if (await exists(prebuiltBundle)) bundleSource = "prebuilt";
+    else throw new Error(`esbuild failed:\n${result.error?.message || result.stderr || result.stdout}`);
+  }
+}
+if (bundleSource === "prebuilt") {
+  await copyFile(prebuiltBundle, bundleFile);
+}
 
 const bundle = await readFile(bundleFile);
 const version = createHash("sha256").update(bundle).digest("hex").slice(0, 12);
@@ -112,5 +132,6 @@ process.stdout.write(`${JSON.stringify({
   cwd,
   files: { htmlFile, sourceFile, bundleFile, statusFile, planFile },
   bundleVersion: version,
+  bundleSource,
   next: `Edit ${planFile}, then run sync-regeneration-status.mjs --cwd ${JSON.stringify(cwd)} --watch.`
 }, null, 2)}\n`);

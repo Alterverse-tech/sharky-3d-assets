@@ -1,0 +1,6 @@
+{
+  "sourceSha256": "b5c817311eb67926ab2d309e5da7e5c38957b6b3b2c511b552c4694b737d27a9",
+  "bundleSha256": "1dea89893fb3a151b3ce6b6a76e68ad79ffa405faa782621296e4219f10d71a8",
+  "toolchain": "esbuild 0.28.x + three 0.185.x (iife/browser/es2020)",
+  "note": "Rebuild the bundle and this meta whenever regeneration-preview.js changes; tests/preview-setup-bench.mjs enforces the match."
+}
