@@ -127,9 +127,11 @@ For an action:
 3. Extract the first `AnimationClip` from the action GLB.
 4. Verify at least one track target exists on the base model.
 5. Play the clip with one `AnimationMixer` on the base root.
-6. If the skeleton cannot bind, directly display the action GLB scene and play its clip, while stating that fallback in the status overlay.
+6. If the skeleton cannot bind, state that in the status overlay. Display the action GLB scene only when that file still contains meshes; clips downloaded by the current client are normally animation-only, so the expected outcome for them is the status message plus a procedural/group fallback in the game, not an action-scene display.
 
 Use a monotonically increasing request id so a slow prior GLB load cannot replace a newer user selection. Include `updatedAt` as a URL query to avoid stale browser-cached models after regeneration.
+
+The same viewer file implements the isolated turntable audit mode: `?audit=<assetId>` (resolved through the status file) or `?glb=<url>` renders the model on a pure background at eight labeled 45-degree yaws with polling and auto-rotation disabled. Orientation Gate 1's isolated audit and `scripts/record-orientation.mjs` depend on this mode, so any rebuild of the viewer must preserve it.
 
 ## 6. Setup and run commands
 
@@ -177,6 +179,6 @@ Do not assume the process bound to `0.0.0.0` receives `127.0.0.1` traffic when a
 - **Progress says success, button remains disabled:** the GLB has not been downloaded to `public/generated-assets`; keep it at 99% running.
 - **Old models appear:** use a fresh plan `runId`/`startedAt`; remove or isolate stale job files and never merge previous status as truth.
 - **Action buttons do not appear:** ensure actions are in the plan and clips are included in the status signature.
-- **Action button loads a T-pose:** verify the action GLB contains an `AnimationClip`; use direct action-scene fallback if the clip cannot bind the base skeleton.
+- **Action button loads a T-pose:** verify the action GLB contains an `AnimationClip`. If the clip cannot bind the base skeleton the viewer reports it in the status overlay; an action-scene display only happens for older cached clips that still contain meshes (current-client clips are animation-only).
 - **Page remains stale:** rebuild the bundle through the setup script; it writes a content-hash query into the script URL. Status fetches use `cache: no-store` plus a timestamp.
 - **Wrong localhost project appears:** inspect `lsof` and response headers; a stale loopback-only server may shadow the intended dev server.
