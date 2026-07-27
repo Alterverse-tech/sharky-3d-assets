@@ -58,7 +58,7 @@ node <skill-dir>/scripts/sync-regeneration-status.mjs --cwd "$(pwd)" --watch --i
 - Preserve or recreate the same DOM contract: `.app` grid root, left `aside`, right `main`, `#list` for item buttons, `#stage` for the Three.js canvas, `.status#status` for the compact status panel, and `<script src="./regeneration-preview.bundle.js"></script>`.
 - Preserve or recreate the same visual contract: dark `#11141b`/`#191d25` page, 360px left column on desktop, responsive two-row mobile layout, compact 8px-radius item buttons, progress bars with `#e5b76c`, green ready border, amber active state, right-side full-height viewer, bottom overlay status panel.
 - Preserve or recreate the same viewer behavior in `src/regeneration-preview.js`: poll `./regeneration-status.json` every 2 seconds with cache disabled, render base and action GLBs as separate left-side buttons with status/progress/filename, disable buttons until `runtimeUrl` exists, load completed GLBs with `GLTFLoader`, use `OrbitControls`, normalize each model to fit the viewer, auto-load the first ready action or model, and rotate the current model slowly.
-- For action previews, load the visible base model first, load the action GLB only as an `AnimationClip` source, and play it through one mixer on the base root. If the clip cannot bind the base skeleton, directly display the action GLB scene and state that fallback in the status overlay.
+- For action previews, load the visible base model first, load the action GLB only as an `AnimationClip` source, and play it through one mixer on the base root. If the clip cannot bind the base skeleton, state that in the status overlay; the viewer displays the action GLB scene only when that file still contains meshes (clips downloaded by the current client are animation-only).
 - Do not redesign, theme, simplify, or move this page during asset work unless the user explicitly requests a different preview UI. If the page already exists, reuse it and update its current-run plan/status; if it is missing, rebuild it to this canonical contract before asset generation, animation, or integration starts.
 - After editing or regenerating the page, run the bundled validator before claiming it is ready. It checks the DOM/viewer contract, plan/status schemas, action slots, safe runtime paths, and every ready GLB on disk:
 
@@ -341,6 +341,7 @@ Manifest authoring rules:
 - `role` and `gameplayRole` should describe game semantics such as `player`, `boss`, `npc`, `collectible`, or `hazard`. `assetKind` should describe asset form such as `character`, `creature`, `prop`, `vehicle`, or `environment`.
 - `orientation` records the independently audited native visual forward axis and the one-time calibration into the game's canonical forward axis. Do not write `VISUALLY_VERIFIED` or `ACCEPTED` unless the mandatory orientation gate below has passed at that level.
 - Keep legacy `url`, `animationClips`, `animations`, and `animationSource` fields readable for backward compatibility, but normalize them into `model` and `actions` at runtime before use.
+- The client also records informational metadata parsed from the downloaded base GLB when available: `rig.bones` (skeleton joint names, for hosts driving procedural bone animation) and `geometry` (bind-pose `bboxMin`/`bboxMax` and `originYOffset`; a non-zero `originYOffset` means the mesh bottom is not at y=0 and naive placement sinks or floats the model). These fields are absent when parsing fails.
 
 Runtime resolver pattern for backward compatibility:
 
@@ -403,7 +404,7 @@ function tick(delta) {
 - When native clips exist, create a `THREE.AnimationMixer`, map clips by case-insensitive substrings such as `idle`, `walk`, `run`, and `jump`, and call `mixer.update(delta)` every frame.
 - Drive action switching from game state: idle/stand states should play `idle`, movement should play `walk` or `run`, and jump/air states should play `jump` when available. Use cross-fades when changing between actions.
 - If no native clips exist, use whole-group bob/tilt/rotation or explicitly labeled procedural clips as fallback animation.
-- If a retarget clip does not bind to the main model's skeleton, fall back to directly displaying the action GLB scene for that state or to a clearly labeled procedural/group fallback. Do not silently claim the main rig is playing that retarget clip.
+- If a retarget clip does not bind to the main model's skeleton, fall back to a clearly labeled procedural/group fallback. Do not silently claim the main rig is playing that retarget clip. Clip GLBs downloaded by this client are stored animation-only (redundant meshes and textures are stripped), so there is no displayable action scene to fall back to; older locally cached clips may still contain one.
 - Add a short `README.md` section named `3D Asset Pipeline` or `3D 素材流水线` describing which assets were generated, which route was used, and what runtime animation source is used.
 
 ## Mandatory asset-integration quality gates
@@ -454,7 +455,7 @@ assert(worldVisualForward.dot(expectedDirection) >= 0.95);
     - rotating the camera and pressing forward moves along the new camera direction;
     - face, torso, feet, movement velocity, and active walk/run animation agree;
     - capture a screenshot or short frame sequence as evidence.
-11. Prefer the existing asset preview or an offline/local renderer for this check. If interactive browser/computer control requires authorization and is unavailable, use another independent rendered inspection path when possible. Do not bypass the gate by silently reclassifying a vector test as visual verification.
+11. Prefer the existing asset preview or an offline/local renderer for this check. The bundled preview page provides an isolated turntable for exactly this: `/regeneration.html?audit=<assetId>` (or `?glb=<url>`) renders the model on a pure background at labeled 45-degree yaw steps (front at yaw 0 = native `+Z`, 90 = `+X`, 180 = `-Z`, 270 = `-X`), and `scripts/record-orientation.mjs --cwd <dir> --asset <id> --front-yaw <deg>` writes the measured axis, mechanical calibration angle, and content hash into `asset.orientation` at `AXIS_AUDITED`. In-game frames can be occluded or ambiguous (a side-on frame is not a front), so an unreadable frame is not evidence. If interactive browser/computer control requires authorization and is unavailable, use another independent rendered inspection path when possible. Do not bypass the gate by silently reclassifying a vector test as visual verification.
 12. Use exactly one of these verification states:
     - `UNVERIFIED`: the native visual forward axis has not been independently established.
     - `AXIS_AUDITED`: the native forward axis was established from asset inspection.
