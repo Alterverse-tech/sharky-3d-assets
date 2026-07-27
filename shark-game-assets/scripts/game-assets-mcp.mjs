@@ -8,6 +8,7 @@ import https from "node:https";
 import path from "node:path";
 import tls from "node:tls";
 import { fileURLToPath } from "node:url";
+import { stripClipGlb, extractGlbMeta } from "./glb-tools.mjs";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const SERVER_INFO = { name: "game_assets", version: "0.4.0" };
@@ -392,7 +393,10 @@ async function generateAssets(args) {
   reportCliProgress("Downloading completed GLB assets.");
   const downloaded = await downloadJobAssets(job, output);
   const generatedManifest = buildLocalManifest(job, downloaded);
-  const manifest = mergeManifests(existing, generatedManifest, args.force === true ? requested.map((asset) => asset.id) : downloaded.map((asset) => asset.id), effectiveRoute);
+  const manifest = await enrichManifestMetadata(
+    mergeManifests(existing, generatedManifest, args.force === true ? requested.map((asset) => asset.id) : downloaded.map((asset) => asset.id), effectiveRoute),
+    workspace
+  );
   await mkdir(path.dirname(output.manifestFile), { recursive: true });
   await writeFile(output.manifestFile, JSON.stringify(manifest, null, 2));
   await writeProgressFile(output.progressFile, job);
@@ -481,7 +485,7 @@ async function generateRigClips(args) {
       const key = clip.preset || name;
       const fileName = `${assetId}-${name}.glb`;
       const filePath = path.join(output.assetRootDir, fileName);
-      const bytes = await apiDownload(clip.downloadUrl);
+      const bytes = stripClipOrKeep(await apiDownload(clip.downloadUrl), fileName);
       await writeFile(filePath, bytes);
       clipMap.set(key, {
         name,
@@ -493,7 +497,7 @@ async function generateRigClips(args) {
     }
   }
 
-  const manifest = await upsertRigClipManifest(output.manifestFile, {
+  const manifest = await upsertRigClipManifest(output.manifestFile, workspace, {
     id: assetId,
     role,
     name: assetName,
@@ -549,6 +553,43 @@ async function pollJobUntilDone(jobId, output) {
   }
 }
 
+// Retarget-clip GLBs arrive with a full copy of the skinned mesh + textures
+// that runtime code never reads (the clip binds to the base model's skeleton),
+// so clips are stored animation-only. Fail-open: any parse problem ships the
+// original bytes untouched.
+function stripClipOrKeep(bytes, label) {
+  try {
+    const stripped = stripClipGlb(bytes);
+    if (stripped.length < bytes.length) {
+      reportCliProgress(`Stripped ${label} to animation-only GLB: ${Math.round(bytes.length / 1024)}KB -> ${Math.round(stripped.length / 1024)}KB.`);
+      return stripped;
+    }
+    return bytes;
+  } catch {
+    return bytes;
+  }
+}
+
+// Best-effort host-facing metadata (skeleton bone names, bind-pose bounds)
+// parsed from the downloaded base GLBs; never blocks the manifest write.
+async function enrichManifestMetadata(manifest, workspace) {
+  for (const asset of manifest?.assets || []) {
+    const runtimeUrl = asset.model?.url || asset.url;
+    if (typeof runtimeUrl !== "string" || /^https?:\/\//i.test(runtimeUrl)) continue;
+    const publicDir = path.resolve(workspace, "public");
+    const file = path.resolve(publicDir, runtimeUrl.replace(/^\.\//, "").replace(/^public\//, "").replace(/^\/+/, ""));
+    if (!file.startsWith(`${publicDir}${path.sep}`)) continue;
+    try {
+      const meta = extractGlbMeta(await readFile(file));
+      if (meta.bones?.length) asset.rig = { ...(asset.rig || {}), bones: meta.bones };
+      if (meta.geometry) asset.geometry = meta.geometry;
+    } catch {
+      // metadata only; the manifest stays valid without it
+    }
+  }
+  return manifest;
+}
+
 async function downloadJobAssets(job, output) {
   const assets = Array.isArray(job.result?.assets) ? job.result.assets : [];
   await mkdir(output.assetRootDir, { recursive: true });
@@ -585,7 +626,7 @@ async function downloadAnimationClips(asset, output) {
       continue;
     }
     try {
-      const bytes = await apiDownload(clip.downloadUrl);
+      const bytes = stripClipOrKeep(await apiDownload(clip.downloadUrl), fileName);
       await writeFile(filePath, bytes);
       downloaded.push({ name, preset: clip.preset, localUrl: `${output.publicPath}/${fileName}`, bytes: bytes.byteLength });
     } catch (error) {
@@ -685,7 +726,7 @@ function mergeManifests(existing, generated, replaceIds, route) {
   };
 }
 
-async function upsertRigClipManifest(manifestFile, entry) {
+async function upsertRigClipManifest(manifestFile, workspace, entry) {
   const existing = sanitizeProviderFields(await readExistingManifest(manifestFile));
   const assets = Array.isArray(existing?.assets) ? existing.assets.slice() : [];
   const index = assets.findIndex((asset) => asset && asset.id === entry.id);
@@ -712,6 +753,7 @@ async function upsertRigClipManifest(manifestFile, entry) {
       existing?.usage ||
       "Load asset url with Three.js GLTFLoader. Load each animationClips url as a separate GLB and copy compatible AnimationClips onto the same rig. If animationSource is procedural_native_clips, play the main GLB's embedded animations directly."
   };
+  await enrichManifestMetadata(manifest, workspace);
   await mkdir(path.dirname(manifestFile), { recursive: true });
   await writeFile(manifestFile, JSON.stringify(manifest, null, 2));
   return manifest;
