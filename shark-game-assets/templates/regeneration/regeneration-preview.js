@@ -90,7 +90,7 @@ async function runAuditMode() {
     `<b>转台审计（隔离/纯背景）</b><br>${escapeHtml(url)}<br>` +
     "正面所在 yaw ⇒ 原生前向轴：0°=+Z · 90°=+X · 180°=−Z · 270°=−X。" +
     "选定后运行 scripts/record-orientation.mjs --asset &lt;id&gt; --front-yaw &lt;deg&gt; 写入 manifest（AXIS_AUDITED）。";
-  document.title = `audit-ready:${auditAssetId || fileNameFromUrl(url)}`;
+  document.title = `audit-ready:${auditGlbUrl ? fileNameFromUrl(url) : auditAssetId}`;
 }
 
 function buildAuditOverlay() {

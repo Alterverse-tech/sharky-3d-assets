@@ -56,6 +56,20 @@ record(
 const validate = run(validateScript, ["--cwd", work]);
 record("C: validate-regeneration-preview passes", validate.status === 0, validate.status === 0 ? "" : validate.stdout.slice(-160));
 
+// D. drift detection: the prebuilt bundle must have been built from the
+// current template source (edit the template -> rebuild bundle + meta)
+import("node:crypto").then(() => {});
+const { createHash } = await import("node:crypto");
+const templateDir = path.join(repoRoot, "shark-game-assets", "templates", "regeneration");
+try {
+  const meta = JSON.parse(readFileSync(path.join(templateDir, "regeneration-preview.bundle.meta.json"), "utf8"));
+  const sourceSha = createHash("sha256").update(readFileSync(path.join(templateDir, "regeneration-preview.js"))).digest("hex");
+  const bundleSha = createHash("sha256").update(readFileSync(path.join(templateDir, "regeneration-preview.bundle.js"))).digest("hex");
+  record("D: prebuilt bundle in sync with template source", meta.sourceSha256 === sourceSha && meta.bundleSha256 === bundleSha, sourceSha === meta.sourceSha256 ? "" : "template changed without bundle rebuild");
+} catch (error) {
+  record("D: prebuilt bundle in sync with template source", false, error.message.slice(0, 80));
+}
+
 rmSync(work, { recursive: true, force: true });
 const failed = results.filter((entry) => !entry.pass);
 console.log(failed.length ? `\n${failed.length} scenario(s) failed` : "\nAll scenarios passed");

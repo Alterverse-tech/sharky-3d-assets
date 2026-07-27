@@ -142,6 +142,38 @@ try {
 }
 record("E: refuses GLB without animations", refused);
 
+// G/H/I: silent-corruption inputs must be refused (throw -> fail-open keeps
+// the original bytes), never mis-copied.
+function refuses(mutate) {
+  const json = structuredClone(fixtureJson);
+  mutate(json);
+  try {
+    stripClipGlb(writeGlb(json, bin));
+    return false;
+  } catch {
+    return true;
+  }
+}
+record(
+  "G: refuses sparse animation accessor",
+  refuses((json) => {
+    json.accessors[1].sparse = { count: 1, indices: { bufferView: 0, componentType: 5125 }, values: { bufferView: 1 } };
+  })
+);
+record(
+  "H: refuses animation data in a foreign buffer",
+  refuses((json) => {
+    json.buffers.push({ byteLength: 16, uri: "external.bin" });
+    json.bufferViews[1] = { ...json.bufferViews[1], buffer: 1 };
+  })
+);
+record(
+  "I: refuses accessor count exceeding the binary chunk",
+  refuses((json) => {
+    json.accessors[1].count = 100000;
+  })
+);
+
 // F (optional): real-world clip from R28 if present on this machine
 const realClip = path.join(os.homedir(), "Desktop", "sharky-lab-R28", "public", "generated-assets", "moonlit-fox-idle.glb");
 if (existsSync(realClip)) {

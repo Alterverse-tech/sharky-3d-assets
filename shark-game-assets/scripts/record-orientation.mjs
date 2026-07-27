@@ -32,15 +32,16 @@ const cwd = path.resolve(option("cwd") || process.cwd());
 const assetId = option("asset");
 const frontYawRaw = option("front-yaw");
 const frames = option("frames");
-if (!assetId || frontYawRaw === undefined) {
+if (!assetId || frontYawRaw === undefined || String(frontYawRaw).trim() === "") {
   process.stderr.write("usage: record-orientation.mjs --cwd <dir> --asset <id> --front-yaw <deg> [--frames <path>]\n");
   process.exit(1);
 }
-const frontYaw = ((Number(frontYawRaw) % 360) + 360) % 360;
-if (!Number.isFinite(frontYaw)) {
+const parsedYaw = Number(frontYawRaw);
+if (!Number.isFinite(parsedYaw)) {
   process.stderr.write("--front-yaw must be a number in degrees.\n");
   process.exit(1);
 }
+const frontYaw = ((parsedYaw % 360) + 360) % 360;
 
 const CARDINALS = [
   { yaw: 0, axis: "+Z" },

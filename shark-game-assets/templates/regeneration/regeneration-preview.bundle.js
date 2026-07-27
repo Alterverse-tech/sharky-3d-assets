@@ -34856,7 +34856,7 @@ void main() {
     auditActive = true;
     buildAuditOverlay();
     statusNode.innerHTML = `<b>\u8F6C\u53F0\u5BA1\u8BA1\uFF08\u9694\u79BB/\u7EAF\u80CC\u666F\uFF09</b><br>${escapeHtml(url)}<br>\u6B63\u9762\u6240\u5728 yaw \u21D2 \u539F\u751F\u524D\u5411\u8F74\uFF1A0\xB0=+Z \xB7 90\xB0=+X \xB7 180\xB0=\u2212Z \xB7 270\xB0=\u2212X\u3002\u9009\u5B9A\u540E\u8FD0\u884C scripts/record-orientation.mjs --asset &lt;id&gt; --front-yaw &lt;deg&gt; \u5199\u5165 manifest\uFF08AXIS_AUDITED\uFF09\u3002`;
-    document.title = `audit-ready:${auditAssetId || fileNameFromUrl(url)}`;
+    document.title = `audit-ready:${auditGlbUrl ? fileNameFromUrl(url) : auditAssetId}`;
   }
   function buildAuditOverlay() {
     const overlay = document.createElement("div");

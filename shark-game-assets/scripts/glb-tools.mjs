@@ -72,13 +72,16 @@ export function stripClipGlb(buffer) {
   let binLength = 0;
   for (const index of [...keepAccessors].sort((a, b) => a - b)) {
     const accessor = structuredClone(source.accessors[index]);
+    if (accessor.sparse) throw new Error("Sparse animation accessor; refusing to strip.");
     if (accessor.bufferView != null) {
       const view = source.bufferViews[accessor.bufferView];
+      if (!view || (view.buffer ?? 0) !== 0) throw new Error("Animation data outside the primary GLB buffer; refusing to strip.");
       const start = (view.byteOffset || 0) + (accessor.byteOffset || 0);
       const stride = view.byteStride || 0;
       const elementBytes = COMPONENT_BYTES[accessor.componentType] * TYPE_COMPONENTS[accessor.type];
       if (stride && stride !== elementBytes) throw new Error("Interleaved animation accessor; refusing to strip.");
       const length = accessor.count * elementBytes;
+      if (start + length > bin.length) throw new Error("Animation accessor exceeds the binary chunk; refusing to strip.");
       const pad = (4 - (binLength % 4)) % 4;
       if (pad) {
         chunks.push(Buffer.alloc(pad));
@@ -133,10 +136,16 @@ export function stripClipGlb(buffer) {
 export function extractGlbMeta(buffer) {
   const { json } = readGlb(buffer);
   const meta = {};
-  const skin = (json.skins || [])[0];
-  if (skin && Array.isArray(skin.joints)) {
-    meta.bones = skin.joints.map((jointIndex) => json.nodes?.[jointIndex]?.name ?? `joint-${jointIndex}`);
+  const seenJoints = new Set();
+  const bones = [];
+  for (const skin of json.skins || []) {
+    for (const jointIndex of skin.joints || []) {
+      if (seenJoints.has(jointIndex)) continue;
+      seenJoints.add(jointIndex);
+      bones.push(json.nodes?.[jointIndex]?.name ?? `joint-${jointIndex}`);
+    }
   }
+  if (bones.length) meta.bones = bones;
   let min;
   let max;
   for (const mesh of json.meshes || []) {

@@ -112,8 +112,13 @@ if (bundleSource === "esbuild") {
     encoding: "utf8",
     stdio: "pipe"
   });
-  if (result.status !== 0) throw new Error(`esbuild failed:\n${result.stderr || result.stdout}`);
-} else {
+  if (result.status !== 0 || result.error) {
+    // A broken local esbuild (present but failing) also falls back.
+    if (await exists(prebuiltBundle)) bundleSource = "prebuilt";
+    else throw new Error(`esbuild failed:\n${result.error?.message || result.stderr || result.stdout}`);
+  }
+}
+if (bundleSource === "prebuilt") {
   await copyFile(prebuiltBundle, bundleFile);
 }
 

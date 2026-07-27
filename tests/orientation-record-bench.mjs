@@ -84,6 +84,11 @@ record(
   orientationD.nativeForwardAxis.startsWith("custom(") && orientationD.calibrationYawDegrees === 160 && orientationD.measuredFrontYawDegrees === 200
 );
 
+// F. empty --front-yaw must be rejected, not silently recorded as yaw 0
+writeManifest();
+const f = run(["--cwd", work, "--asset", "hero", "--front-yaw", ""]);
+record("F: empty front-yaw rejected", f.status === 1 && readOrientation() === undefined);
+
 // E. missing base GLB -> refuses to record (audit must stay invalidatable)
 writeManifest();
 rmSync(path.join(work, "public", "generated-assets", "hero.glb"));
