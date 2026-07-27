@@ -1,0 +1,62 @@
+#!/usr/bin/env node
+// Offline bench for issue #10: setup-regeneration-preview.mjs must succeed in
+// a dependency-free directory (no esbuild anywhere up the tree) by falling
+// back to the prebuilt bundle, and the result must pass the preview validator.
+
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const setupScript = path.join(repoRoot, "shark-game-assets", "scripts", "setup-regeneration-preview.mjs");
+const validateScript = path.join(repoRoot, "shark-game-assets", "scripts", "validate-regeneration-preview.mjs");
+const work = mkdtempSync(path.join(os.tmpdir(), "preview-bench-"));
+const results = [];
+
+function record(name, pass, detail) {
+  results.push({ name, pass });
+  console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`);
+}
+
+function run(script, args) {
+  try {
+    return { status: 0, stdout: execFileSync("node", [script, ...args], { encoding: "utf8" }) };
+  } catch (error) {
+    return { status: error.status ?? 1, stdout: `${error.stdout || ""}${error.stderr || ""}` };
+  }
+}
+
+// A. clean-room setup succeeds via the prebuilt bundle
+const setup = run(setupScript, ["--cwd", work]);
+let setupJson = {};
+try {
+  setupJson = JSON.parse(setup.stdout);
+} catch {
+  // recorded below
+}
+record(
+  "A: setup succeeds without esbuild",
+  setup.status === 0 && setupJson.status === "ok" && setupJson.bundleSource === "prebuilt",
+  `bundleSource=${setupJson.bundleSource ?? "n/a"}`
+);
+
+// B. bundle file landed and the html cache-buster points at it
+const bundleFile = path.join(work, "public", "regeneration-preview.bundle.js");
+const html = existsSync(path.join(work, "public", "regeneration.html"))
+  ? readFileSync(path.join(work, "public", "regeneration.html"), "utf8")
+  : "";
+record(
+  "B: bundle + versioned script tag present",
+  existsSync(bundleFile) && readFileSync(bundleFile).length > 100000 && /regeneration-preview\.bundle\.js\?v=[0-9a-f]{12}/.test(html)
+);
+
+// C. the standard validator accepts the clean-room result
+const validate = run(validateScript, ["--cwd", work]);
+record("C: validate-regeneration-preview passes", validate.status === 0, validate.status === 0 ? "" : validate.stdout.slice(-160));
+
+rmSync(work, { recursive: true, force: true });
+const failed = results.filter((entry) => !entry.pass);
+console.log(failed.length ? `\n${failed.length} scenario(s) failed` : "\nAll scenarios passed");
+process.exit(failed.length ? 1 : 0);
