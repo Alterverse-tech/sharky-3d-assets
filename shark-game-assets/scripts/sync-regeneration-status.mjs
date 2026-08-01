@@ -10,6 +10,8 @@ const watch = argv.includes("--watch");
 const intervalMs = Math.max(250, Number(option("interval") || 1000));
 const batchRoot = path.resolve(cwd, option("batch-root") || ".asset-batches");
 const statusPath = path.resolve(cwd, option("status") || "public/regeneration-status.json");
+const progressMdPath = path.resolve(cwd, option("progress-md") || "animation-plan-progress.md");
+const animationPlanPath = path.resolve(cwd, "animation-plan.json");
 const planPath = await resolvePlanPath();
 let plan;
 let notBeforeMs = 0;
@@ -270,6 +272,61 @@ function signatureOf(status) {
   return JSON.stringify({ status: status.status, runId: status.runId, message: status.message, items: status.items, failures: status.failures });
 }
 
+function statusBadge(status, progress) {
+  if (status === "ready") return "✅";
+  if (status === "failed") return "❌";
+  if (status === "running") return `🔄 ${clampProgress(progress)}%`;
+  return "⬜";
+}
+
+function mdCell(value) {
+  return String(value ?? "").replaceAll("|", "／").replaceAll("\n", " ").trim() || "—";
+}
+
+// 当工作区存在冻结的动作确认清单（animation-plan.json，来自确认门）时，把
+// 同一张表格镜像成 markdown 进度文件：每行动作带实时状态列，状态变化时整
+// 文件原子覆盖。用户在编辑器里就能看进度，无需打开预览页。
+async function writeAnimationPlanProgress(statusDoc, changed) {
+  let animationPlan;
+  try {
+    animationPlan = JSON.parse(await readFile(animationPlanPath, "utf8"));
+  } catch {
+    return; // 没有动作确认清单的任务不产出进度 md。
+  }
+  if (!Array.isArray(animationPlan.assets) || !animationPlan.assets.length) return;
+  if (!changed && (await fileExists(progressMdPath))) return;
+  const itemsById = new Map((statusDoc.items || []).map((item) => [item.id, item]));
+  const lines = [
+    "# 动作生成进度",
+    "",
+    `- runId: \`${statusDoc.runId}\``,
+    `- 更新时间: ${statusDoc.updatedAt}`,
+    `- 总览: ${statusDoc.message}`,
+    "",
+    "| 角色/实体 | 动作 | 触发动作场景描述 | 来源 | Preset | 消耗 | 状态 |",
+    "| --- | --- | --- | --- | --- | --- | --- |"
+  ];
+  for (const asset of animationPlan.assets) {
+    const item = itemsById.get(asset.id);
+    lines.push(
+      `| ${mdCell(asset.name || asset.id)} | （基础模型） | — | 模型生成 | — | — | ${item ? statusBadge(item.status, item.progress) : "⬜"} |`
+    );
+    for (const action of asset.actions || []) {
+      const isTripo = action.source === "tripo";
+      const clip = item?.clips?.find((candidate) => candidate.name === String(action.name).toLowerCase());
+      const source = isTripo ? "Tripo" : action.degraded ? "程序动画（超预算降级）" : "程序动画";
+      const badge = isTripo ? (clip ? statusBadge(clip.status, clip.progress) : "⬜") : "✅ 运行时";
+      lines.push(
+        `| ${mdCell(asset.name || asset.id)} | ${mdCell(action.name)} | ${mdCell(action.scene)} | ${source} | ${isTripo ? `\`${action.preset}\`` : "—"} | ${isTripo ? 1 : 0} | ${badge} |`
+      );
+    }
+  }
+  lines.push("", "> 本文件由 sync-regeneration-status.mjs 自动覆盖维护，勿手工编辑。", "");
+  const temporary = `${progressMdPath}.${process.pid}.tmp`;
+  await writeFile(temporary, lines.join("\n"), "utf8");
+  await rename(temporary, progressMdPath);
+}
+
 async function syncOnce() {
   plan = normalizePlan(await readRequiredJson(planPath));
   notBeforeMs = Date.parse(plan.startedAt || "") || 0;
@@ -298,14 +355,17 @@ async function syncOnce() {
   }
   const previous = await readJson(statusPath);
   const next = { status: summary.status, runId: plan.runId, updatedAt: previous?.data?.updatedAt || new Date(0).toISOString(), message: summary.message, items, failures };
-  if (previous && signatureOf(previous.data) === signatureOf(next)) return false;
-  next.updatedAt = new Date().toISOString();
-  await mkdir(path.dirname(statusPath), { recursive: true });
-  const temporary = `${statusPath}.${process.pid}.tmp`;
-  await writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, "utf8");
-  await rename(temporary, statusPath);
-  process.stdout.write(`[regeneration] ${next.updatedAt} ${next.message}\n`);
-  return true;
+  const changed = !(previous && signatureOf(previous.data) === signatureOf(next));
+  if (changed) {
+    next.updatedAt = new Date().toISOString();
+    await mkdir(path.dirname(statusPath), { recursive: true });
+    const temporary = `${statusPath}.${process.pid}.tmp`;
+    await writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+    await rename(temporary, statusPath);
+    process.stdout.write(`[regeneration] ${next.updatedAt} ${next.message}\n`);
+  }
+  await writeAnimationPlanProgress(next, changed);
+  return changed;
 }
 
 do {
