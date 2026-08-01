@@ -149,7 +149,7 @@ node <skill-dir>/scripts/sync-regeneration-status.mjs \
   --interval 1000
 ```
 
-Do this immediately after locating the workspace and before readiness/generate/animate calls or integration code changes. These preview scripts are local-only and make no remote calls. If remote access later fails, keep the page available with pending status.
+Do this immediately after locating the workspace and before readiness/generate/animate calls or integration code changes. For asset generation tasks, also start (or reuse) the local server that serves `/regeneration.html` and verify it per section 7 before the first remote call — in a fresh project this whole stage is a generate-and-deploy of the page, not a restore. These preview scripts are local-only and make no remote calls. If remote access later fails, keep the page available with pending status.
 
 For split batches, write each client run under `.asset-batches/<batch-name>`; the watcher discovers them automatically.
 
