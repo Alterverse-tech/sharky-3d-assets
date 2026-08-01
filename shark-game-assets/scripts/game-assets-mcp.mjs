@@ -70,9 +70,32 @@ const HTTP_TIMEOUT_MS = 60000;
 const VALID_ROLES = ["player", "collectible", "hazard", "prop", "vehicle", "environment"];
 const VALID_KINDS = ["character", "creature", "prop", "vehicle", "environment"];
 const ROUTES = ["auto", "tripo", "gemini_reference"];
-const BIPED_RIG_CLIPS = ["preset:biped:idle", "preset:biped:walk", "preset:biped:run", "preset:biped:jump"];
+// Bundled snapshot of the Tripo retarget preset library, grouped by rig model
+// and rig type. The catalog — not a hardcoded whitelist — decides which presets
+// the animate command accepts; the default clip set stays walk-only.
+const PRESET_CATALOG_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "preset-catalog.json");
+const FALLBACK_RIG_CLIPS = ["preset:biped:idle", "preset:biped:walk", "preset:biped:run", "preset:biped:jump"];
+const PRESET_CATALOG = loadPresetCatalog();
+const RIG_CLIP_PRESET_ENUM = PRESET_CATALOG
+  ? [...new Set(Object.values(PRESET_CATALOG.rigModels).flatMap((model) => Object.values(model.rigTypes).flat()))]
+  : FALLBACK_RIG_CLIPS;
 const DEFAULT_BIPED_RIG_CLIPS = ["preset:biped:walk"];
 const DEFAULT_RIG_MODEL_VERSION = "v1.0-20240301";
+
+function loadPresetCatalog() {
+  try {
+    return JSON.parse(readFileSync(PRESET_CATALOG_FILE, "utf8"));
+  } catch (error) {
+    process.stderr.write(`[game-assets] preset-catalog.json could not be read (${error.message}); falling back to the core preset set.\n`);
+    return null;
+  }
+}
+
+function rigClipPresetsFor(modelVersion) {
+  const rigTypes = PRESET_CATALOG?.rigModels?.[modelVersion]?.rigTypes;
+  if (!rigTypes) return new Set(FALLBACK_RIG_CLIPS);
+  return new Set(Object.values(rigTypes).flat());
+}
 const ASSET_PROMPT_RULE =
   'Write concise English asset prompts describing the subject, identity-defining shape, proportions, materials, colors, and gameplay role. Preserve the visual style from the user or game specification. Do not add "simple", "low-poly", "stylized", or "cartoon" unless that style was requested. Favor a single fully visible subject, readable silhouette, clean separation of major forms, and no background, text, logo, watermark, unrelated props, duplicate parts, or extra characters.';
 
@@ -134,6 +157,13 @@ const TOOL_DEFINITIONS = [
               animated: {
                 type: "boolean",
                 description: "Set true only for one living main character if rigging is enabled on the server."
+              },
+              animations: {
+                type: "array",
+                maxItems: 3,
+                items: { type: "string" },
+                description:
+                  "Confirmed Tripo retarget presets for this character/creature (max 3), from scripts/preset-catalog.json and the user-confirmed action requirements list. Omit for the default walk-only rig. Ignored on the tripo route."
               }
             },
             required: ["id", "role", "name", "prompt"]
@@ -146,7 +176,7 @@ const TOOL_DEFINITIONS = [
   {
     name: "generate_tripo_rig_clips",
     description:
-      "Animate an existing Tripo GLB task into rigged biped GLB clips. Uses Tripo rig v1.0-20240301 by default and never sends multiple retarget presets in one request. Defaults to walk only; idle, run, and jump require explicit selection. If retarget fails after rigging, the API may embed a procedural Walk clip in the main GLB; idle is runtime procedural motion.",
+      "Animate an existing Tripo GLB task into rigged biped GLB clips. Uses Tripo rig v1.0-20240301 by default and never sends multiple retarget presets in one request. Defaults to walk only; any other preset from scripts/preset-catalog.json requires explicit selection backed by a user-confirmed action requirements list. If retarget fails after rigging, the API may embed a procedural Walk clip in the main GLB; idle is runtime procedural motion.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -174,9 +204,9 @@ const TOOL_DEFINITIONS = [
         },
         animations: {
           type: "array",
-          items: { type: "string", enum: BIPED_RIG_CLIPS },
+          items: { type: "string", enum: RIG_CLIP_PRESET_ENUM },
           description:
-            "Optional biped presets. Omit to generate walk only. If multiple presets are provided, this client splits them into separate /animate calls."
+            "Optional presets from scripts/preset-catalog.json, for example preset:biped:climb or preset:biped:run_upstairs. Omit to generate walk only. If multiple presets are provided, this client splits them into separate /animate calls."
         },
         spec: {
           type: "string",
@@ -264,7 +294,7 @@ async function handleMessage(message) {
       capabilities: { tools: {} },
       serverInfo: SERVER_INFO,
       instructions:
-        "Use this server only for key GLB assets in 3D games. Pass cwd as the current project directory. Generate 1-3 essential assets, reuse asset_manifest.json by default, and keep primitive fallbacks. The gemini_reference route automatically rigs character/creature GLBs; retarget success returns separate animationClips and retarget failure may return main-GLB procedural_native_clips. For existing-GLB animation, Tripo retarget must be one preset per request; the default biped clip is walk only, idle/run/jump are explicit options, and each successful retarget clip should be recorded as a separate animationClips GLB. Runtime idle belongs on the character visual child, not in the default GLB."
+        "Use this server only for key GLB assets in 3D games. Pass cwd as the current project directory. Generate 1-3 essential assets, reuse asset_manifest.json by default, and keep primitive fallbacks. The gemini_reference route automatically rigs character/creature GLBs; retarget success returns separate animationClips and retarget failure may return main-GLB procedural_native_clips. For existing-GLB animation, Tripo retarget must be one preset per request; the default biped clip is walk only, any other catalog preset is an explicit option gated by a user-confirmed action requirements list, and each successful retarget clip should be recorded as a separate animationClips GLB. Runtime idle belongs on the character visual child, not in the default GLB."
     });
     return;
   }
@@ -442,13 +472,16 @@ async function generateRigClips(args) {
 
   const role = VALID_ROLES.includes(args.role) ? args.role : "player";
   const assetName = typeof args.assetName === "string" && args.assetName.trim() ? args.assetName.trim() : assetId;
-  const requestedAnimations = normalizeRigClipAnimations(args.animations);
+  const modelVersion = typeof args.modelVersion === "string" && args.modelVersion.trim() ? args.modelVersion.trim() : DEFAULT_RIG_MODEL_VERSION;
+  const requestedAnimations = normalizeRigClipAnimations(args.animations, modelVersion);
   if (requestedAnimations === false) {
     return {
       status: "failed",
       workspace,
       output,
-      errors: [`animations must contain only supported biped presets: ${BIPED_RIG_CLIPS.join(", ")}`]
+      errors: [
+        `animations must contain only presets listed in preset-catalog.json for rig model ${modelVersion} (for example preset:biped:walk, preset:biped:climb, preset:biped:run_upstairs).`
+      ]
     };
   }
 
@@ -461,7 +494,7 @@ async function generateRigClips(args) {
     const body = {
       originalModelTaskId,
       spec: args.spec === "tripo" || args.spec === "mixamo" ? args.spec : "tripo",
-      modelVersion: typeof args.modelVersion === "string" && args.modelVersion.trim() ? args.modelVersion.trim() : DEFAULT_RIG_MODEL_VERSION,
+      modelVersion,
       ...(plan.animations ? { animations: plan.animations } : {})
     };
     responses.push(await apiRequest("POST", "/api/asset-jobs/animate", body));
@@ -976,15 +1009,27 @@ function normalizeAssets(value, route) {
       };
       if (!base.id || !base.prompt) return undefined;
       if (route === "gemini_reference") {
+        const animations = normalizeGenerateAnimations(raw.animations);
         return {
           ...base,
-          assetKind: VALID_KINDS.includes(raw.assetKind) ? raw.assetKind : inferAssetKind(base)
+          assetKind: VALID_KINDS.includes(raw.assetKind) ? raw.assetKind : inferAssetKind(base),
+          ...(animations ? { animations } : {})
         };
       }
       return base;
     })
     .filter(Boolean)
     .slice(0, 4);
+}
+
+// Confirmed per-asset retarget presets for the generate call (max 3, catalog
+// members only). The animation-plan validator guarantees membership upstream;
+// this is a lenient last-line filter so a stray value cannot spend credits.
+function normalizeGenerateAnimations(value) {
+  if (!Array.isArray(value)) return undefined;
+  const allowed = new Set(RIG_CLIP_PRESET_ENUM);
+  const presets = [...new Set(value.map((preset) => String(preset).trim()).filter(Boolean))].filter((preset) => allowed.has(preset));
+  return presets.length ? presets.slice(0, 3) : undefined;
 }
 
 function selectRoute(value, args) {
@@ -1058,12 +1103,13 @@ function safeId(value) {
     .slice(0, 48);
 }
 
-function normalizeRigClipAnimations(value) {
+function normalizeRigClipAnimations(value, modelVersion = DEFAULT_RIG_MODEL_VERSION) {
   if (value === undefined) return undefined;
   const raw = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
   const animations = raw.map((animation) => String(animation).trim()).filter(Boolean);
   if (animations.length === 0) return false;
-  if (animations.some((animation) => !BIPED_RIG_CLIPS.includes(animation))) return false;
+  const allowed = rigClipPresetsFor(modelVersion);
+  if (animations.some((animation) => !allowed.has(animation))) return false;
   return [...new Set(animations)];
 }
 

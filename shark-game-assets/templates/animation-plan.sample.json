@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "schema": "shark-game-assets-animation-plan",
+  "runId": "escape-clocktower-20260801-01",
+  "createdAt": "2026-08-01T10:00:00.000Z",
+  "gameSummary": "Third-person escape: a detective flees a clocktower while a patrol guard hunts the halls and a watch-shark circles the flooded cellar.",
+  "budget": { "tripoPresetsPerKeyAsset": 3 },
+  "confirmation": {
+    "confirmed": true,
+    "confirmedBy": "user",
+    "confirmedAt": "2026-08-01T10:05:00.000Z",
+    "note": "User approved after swapping climb for run_upstairs on the detective."
+  },
+  "assets": [
+    {
+      "id": "detective-player",
+      "name": "Detective Player",
+      "tier": "key",
+      "tierReason": "Protagonist present in every scene.",
+      "rigModel": "v1.0-20240301",
+      "rigType": "biped",
+      "actions": [
+        { "name": "walk", "source": "tripo", "preset": "preset:biped:walk", "scene": "全程基础移动" },
+        { "name": "run_upstairs", "source": "tripo", "preset": "preset:biped:run_upstairs", "scene": "第三幕沿钟楼旋转楼梯逃亡" },
+        { "name": "hurt", "source": "tripo", "preset": "preset:biped:hurt", "scene": "被守卫击中时的受击反馈" },
+        { "name": "idle", "source": "procedural", "scene": "站立待机（运行时程序动画）" }
+      ]
+    },
+    {
+      "id": "patrol-guard",
+      "name": "Patrol Guard",
+      "tier": "secondary",
+      "tierReason": "Repeated hallway enemy; procedural motion is sufficient.",
+      "rigModel": "v1.0-20240301",
+      "rigType": "biped",
+      "actions": [
+        { "name": "walk", "source": "procedural", "scene": "走廊往返巡逻" }
+      ]
+    },
+    {
+      "id": "watch-shark",
+      "name": "Watch Shark",
+      "tier": "key",
+      "tierReason": "Cellar gatekeeper tied to the second-act stealth beat.",
+      "rigModel": "v2.5-20260210",
+      "rigType": "aquatic",
+      "actions": [
+        { "name": "march", "source": "tripo", "preset": "preset:aquatic:march", "scene": "水牢巡游（该骨骼仅支持此预设）" }
+      ]
+    }
+  ]
+}

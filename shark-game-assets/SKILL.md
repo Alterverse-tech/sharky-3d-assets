@@ -28,6 +28,7 @@ Before taking task actions with this skill, perform a best-effort self-update ch
 - When the user explicitly asks to regenerate a game and says not to reuse historical assets, do not reuse existing GLBs from `asset_manifest.json`; create fresh stable ids, usually with a timestamp or run suffix, and pass `force: true`.
 - For regeneration work with concrete characters or critical entity props, use the Gemini-Tripo branch (`route: "gemini_reference"`) for those key assets and keep that set to 1-5 models total. If the client/API batch cap is lower than the requested total, split into multiple generate calls.
 - For secondary static props that do not need strong visual control or rigged animation, use the faster Tripo branch (`route: "tripo"`) and keep that set to 3-10 models total. Do not include decorative filler just to reach the lower bound.
+- Before generating or wiring any character/creature action clips (including the default `walk` from the `gemini_reference` continuation), complete the action requirements confirmation gate: understand the game description, present the action requirements table, apply the user's edits, and proceed only after the user's explicit confirmation. See "Action requirements confirmation (animation planning gate)".
 - Use primitive Three.js geometry only as an interim placeholder while assets are pending and as the runtime fallback if a GLB fails to load.
 - Use the configured asset-generation service as a public anonymous endpoint from Codex, Claude Code, other compatible agent clients, and direct CLI installs. Do not request, read, send, store, mention, or expose any client credential; asset-generation users need neither a login nor a token.
 - If the asset service is unreachable or a platform policy blocks the remote call, pause the asset workflow and report that the asset service is temporarily unavailable. Do not ask the user for credentials and do not silently replace requested GLB generation with local placeholders.
@@ -90,6 +91,36 @@ Use `tripo` for the fast route: direct text prompt to Tripo3D text-to-model. Thi
 Use `gemini_reference` when visual control matters; this is the Gemini-Tripo branch when the user describes it that way. Gemini first creates a pure-white-background reference image, then Tripo image-to-model creates the GLB. For `assetKind: "character"` or `"creature"`, this route must continue into the `tripo-rig-clip` flow so the final manifest contains a rigged main GLB plus default `walk` animation support; idle is runtime procedural motion. Prefer this route when the user mentions Gemini, Nano Banana, T-pose, white background, reference image, image-to-model, character sheet, style consistency, or when a key character's silhouette must be controlled.
 
 Use `auto` only when you are comfortable with the server choosing from the prompt. If in doubt, choose the route yourself and pass it explicitly.
+
+## Action requirements confirmation (animation planning gate)
+
+Whenever a task will generate character/creature action clips (including the default `walk` produced by the `gemini_reference` continuation) or wire new action animations into game code, complete this gate before the first generate/animate call. Static-prop-only tasks, publish-only tasks, and help/readiness-only requests skip it.
+
+1. Understand the game description or script first. Extract the characters/entities, the plot beats, and every moment where an action animation is actually triggered.
+2. Act as (or delegate to) a senior game-modeling planner and draft the action requirements list. Select Tripo presets only from [scripts/preset-catalog.json](scripts/preset-catalog.json), the bundled snapshot of the Tripo retarget preset library grouped by rig model and rig type. Pick presets from the scene, not from habit: a ladder scene wants `preset:biped:climb`, a staircase chase wants `preset:biped:run_upstairs`.
+3. Present the list to the user as a table before generating anything. Use at least these columns: 角色/实体 (character/entity), 动作 (action), 触发动作场景描述 (scene that triggers the action), plus the recommended source and Tripo cost:
+
+| 角色/实体 | 动作 | 触发动作场景描述 | 建议来源 | Preset | 消耗 |
+| --- | --- | --- | --- | --- | --- |
+| Detective (key) | walk | 全程基础移动 | Tripo | `preset:biped:walk` | 1 |
+| Detective (key) | run_upstairs | 第三幕沿钟楼旋转楼梯逃亡 | Tripo | `preset:biped:run_upstairs` | 1 |
+| Detective (key) | idle | 站立待机 | Procedural runtime | — | 0 |
+| Patrol guard (secondary) | walk | 走廊往返巡逻 | Procedural fallback | — | 0 |
+
+4. The user may add, remove, or modify rows. Re-render the table after every change. Do not call generate/animate and do not modify game code until the user replies with an explicit confirmation of the current list.
+5. Budget rules the proposal must satisfy (the validator enforces them):
+   - `key` assets: at most 3 Tripo presets each (`budget.tripoPresetsPerKeyAsset`).
+   - `secondary` assets: 0 Tripo presets; they use procedural/runtime animation.
+   - Non-biped rig types may only use their own catalog presets (for example `preset:aquatic:march`); `avian` has none. Show these limits in the table instead of letting the user confirm an impossible row.
+   - If a user edit exceeds a budget, explain the overflow and offer to swap a preset out or downgrade the extra action to procedural. Never silently drop or reorder a confirmed row.
+6. Freeze the confirmed list as `animation-plan.json` in the workspace (template: [templates/animation-plan.sample.json](templates/animation-plan.sample.json)), record the confirmation in `confirmation.confirmed/confirmedBy/confirmedAt`, then validate:
+
+```bash
+node <skill-dir>/scripts/validate-animation-plan.mjs --cwd "$(pwd)"
+```
+
+   The validator fails without an explicit user confirmation marker, on any preset outside the catalog, and on missing scene descriptions; a failed validation blocks action generation. Budget overruns do not fail: Tripo actions beyond an asset's budget (3 for `key`, 0 for `secondary`) are degraded in place to `source: "procedural"` with an explicit `degraded` marker — confirmed order decides which actions stay on Tripo — the plan file is rewritten, and each degradation is reported as a warning. Tell the user which actions were degraded; never present a degraded action as a Tripo clip.
+7. Derive everything downstream from the frozen plan: per-asset `animated` flags, the regeneration-plan action slots, and the manifest `actions` written after generation. Pass each confirmed asset's Tripo presets as `assets[].animations` (max 3) in the `generate` call — Tripo actions must ride the generation request because skill-generated assets have no locally recoverable task id afterwards. For a user-supplied Tripo task id, use `animate` (one preset per call) instead. `source: "procedural"` rows consume no Tripo preset; today they run on the existing runtime procedural idle / group-movement paths, and manifest entries must label them honestly (never as Tripo retarget clips).
 
 ## Environment
 
@@ -167,14 +198,15 @@ node <skill-dir>/scripts/sync-regeneration-status.mjs \
 ```
 
    Start or reuse a local server and provide `/regeneration.html` early when practical. For an integration-only task with existing local GLBs, populate the plan from `asset_manifest.json`, run the same setup/synchronizer, and make existing base/action GLBs previewable before changing integration code. These preview actions are local-only.
-3. Call the configured public asset API without requesting or sending a login or client token. Platform or sandbox restrictions still apply.
-4. If planning 3 or more assets, or if this is the first asset generation in the thread, check readiness (`<skill-dir>` is this skill's directory):
+3. If the task will generate or wire character/creature actions, complete the action requirements confirmation gate first: draft the table from the game description, wait for the user's explicit confirmation, freeze `animation-plan.json`, and run `validate-animation-plan.mjs`. Do not proceed to generate/animate before it passes.
+4. Call the configured public asset API without requesting or sending a login or client token. Platform or sandbox restrictions still apply.
+5. If planning 3 or more assets, or if this is the first asset generation in the thread, check readiness (`<skill-dir>` is this skill's directory):
 
 ```bash
 node <skill-dir>/scripts/game-assets-mcp.mjs readiness --cwd "$(pwd)"
 ```
 
-5. Generate the selected asset set. By default generate 1-3 assets (batch max 4). For explicit game-regeneration requests, follow the quantity limits above: 1-5 Gemini-Tripo key entity models, and optionally 3-10 Tripo static prop models. Split into multiple generate calls when a desired set is larger than the current client/API batch cap. Pass parameters as one JSON object:
+6. Generate the selected asset set. By default generate 1-3 assets (batch max 4). For explicit game-regeneration requests, follow the quantity limits above: 1-5 Gemini-Tripo key entity models, and optionally 3-10 Tripo static prop models. Split into multiple generate calls when a desired set is larger than the current client/API batch cap. Pass parameters as one JSON object:
 
 ```bash
 node <skill-dir>/scripts/game-assets-mcp.mjs generate --cwd "$(pwd)" --params '{
@@ -185,14 +217,14 @@ node <skill-dir>/scripts/game-assets-mcp.mjs generate --cwd "$(pwd)" --params '{
 ```
 
    - `route`: `tripo`, `gemini_reference`, or `auto`.
-   - `assets`: objects with stable kebab-case `id`, `role`, `name`, `prompt`, and optionally `assetKind`; keep counts within the default or regeneration-specific limits.
+   - `assets`: objects with stable kebab-case `id`, `role`, `name`, `prompt`, and optionally `assetKind`; keep counts within the default or regeneration-specific limits. For confirmed characters/creatures, add `animations` with the frozen plan's Tripo presets (max 3 per asset, catalog members only); omit it for the default walk-only rig.
    - On `gemini_reference`, character/creature assets are automatically rigged after GLB generation. The default `animationClips` set contains only `walk`; if Tripo retarget failed, expect main-GLB fallback fields `animations: ["Walk"]` and `animationSource: "procedural_native_clips"`. A missing idle clip is normal.
    - `force`: only when the user explicitly asked to regenerate assets.
    - The command reports concise progress on stderr while polling (typically 1-3 minutes per batch), then prints JSON on stdout; exit code 1 means the batch failed.
-6. After the command returns, read `asset_manifest.json` from `cwd`. Treat that file as the source of truth and keep the preview synchronizer running until every successful local GLB/action appears.
-7. Wire `manifest.assets` into the game code with Three.js `GLTFLoader`. Treat the manifest as a semantic registry: choose assets by `bindings`, `id`, or `role`, and choose animations by `actions.<name>.url` or legacy `animationClips[].name`/`preset`, never by guessing file names or folders.
-8. Keep a local primitive fallback for every generated asset. The game must remain playable when a GLB fails to load.
-9. Run `validate-regeneration-preview.mjs`, then stop the synchronizer normally after final status and manifest are stable.
+7. After the command returns, read `asset_manifest.json` from `cwd`. Treat that file as the source of truth and keep the preview synchronizer running until every successful local GLB/action appears.
+8. Wire `manifest.assets` into the game code with Three.js `GLTFLoader`. Treat the manifest as a semantic registry: choose assets by `bindings`, `id`, or `role`, and choose animations by `actions.<name>.url` or legacy `animationClips[].name`/`preset`, never by guessing file names or folders.
+9. Keep a local primitive fallback for every generated asset. The game must remain playable when a GLB fails to load.
+10. Run `validate-regeneration-preview.mjs`, then stop the synchronizer normally after final status and manifest are stable.
 
 ## Publish a completed game to the Shark portal
 

@@ -22,7 +22,7 @@ Use this subskill when the user already has a GLB or Tripo model task and asks f
 - Tripo batch retarget can corrupt the second and later clips, often as arm crossing, center-line hand collapse, or exaggerated shoulder rotation. This is a Tripo retarget pipeline problem, not a GLB multi-clip limitation.
 - Store each retargeted clip as its own GLB. Do not merge clips into one GLB in this flow.
 - The default required biped clip is `preset:biped:walk` only.
-- `preset:biped:idle`, `preset:biped:run`, and `preset:biped:jump` remain supported only when explicitly requested.
+- Any other preset in the parent skill's `scripts/preset-catalog.json` (for example `preset:biped:idle`, `preset:biped:run`, `preset:biped:jump`, `preset:biped:climb`, `preset:biped:run_upstairs`) is supported only when explicitly requested and confirmed through the parent skill's action requirements gate. Presets outside the catalog are rejected by the client.
 - If Tripo retarget returns `failed` for required `walk` after rigging succeeds, keep the rigged GLB and use the server's local procedural fallback: embed a conservative native `Walk` clip into the main GLB. Idle remains runtime procedural motion and is never added by the fallback.
 
 ## Preferred client workflow
