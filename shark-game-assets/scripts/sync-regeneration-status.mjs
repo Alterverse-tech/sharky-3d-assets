@@ -11,6 +11,9 @@ const intervalMs = Math.max(250, Number(option("interval") || 1000));
 const batchRoot = path.resolve(cwd, option("batch-root") || ".asset-batches");
 const statusPath = path.resolve(cwd, option("status") || "public/regeneration-status.json");
 const progressMdPath = path.resolve(cwd, option("progress-md") || "animation-plan-progress.md");
+// 已知本地服务器地址时传 --base-url http://127.0.0.1:4173，进度 md 里的 GLB 链接
+// 会渲染成可点击的完整下载地址；缺省时只写站内路径。
+const progressBaseUrl = String(option("base-url") || "").replace(/\/+$/, "");
 const animationPlanPath = path.resolve(cwd, "animation-plan.json");
 const planPath = await resolvePlanPath();
 let plan;
@@ -296,6 +299,14 @@ async function writeAnimationPlanProgress(statusDoc, changed) {
   if (!Array.isArray(animationPlan.assets) || !animationPlan.assets.length) return;
   if (!changed && (await fileExists(progressMdPath))) return;
   const itemsById = new Map((statusDoc.items || []).map((item) => [item.id, item]));
+  const glbCells = (runtimeUrl) => {
+    if (!runtimeUrl) return "— | —";
+    const download = progressBaseUrl
+      ? `[${runtimeUrl.split("/").at(-1)}](${progressBaseUrl}${runtimeUrl})`
+      : `\`${runtimeUrl}\``;
+    return `${download} | \`public${runtimeUrl}\``;
+  };
+  const gaps = [];
   const lines = [
     "# 动作生成进度",
     "",
@@ -303,23 +314,36 @@ async function writeAnimationPlanProgress(statusDoc, changed) {
     `- 更新时间: ${statusDoc.updatedAt}`,
     `- 总览: ${statusDoc.message}`,
     "",
-    "| 角色/实体 | 动作 | 触发动作场景描述 | 来源 | Preset | 消耗 | 状态 |",
-    "| --- | --- | --- | --- | --- | --- | --- |"
+    "| 角色/实体 | 动作 | 触发动作场景描述 | 来源 | Preset | 消耗 | 状态 | GLB（下载） | 本地路径 |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"
   ];
   for (const asset of animationPlan.assets) {
     const item = itemsById.get(asset.id);
+    const baseBadge = item ? statusBadge(item.status, item.progress) : "⬜";
+    if (!item || item.status !== "ready") {
+      gaps.push(`${baseBadge} ${asset.name || asset.id} /（基础模型）${item?.error ? `：${item.error}` : ""}`);
+    }
     lines.push(
-      `| ${mdCell(asset.name || asset.id)} | （基础模型） | — | 模型生成 | — | — | ${item ? statusBadge(item.status, item.progress) : "⬜"} |`
+      `| ${mdCell(asset.name || asset.id)} | （基础模型） | — | 模型生成 | — | — | ${baseBadge} | ${glbCells(item?.runtimeUrl)} |`
     );
     for (const action of asset.actions || []) {
       const isTripo = action.source === "tripo";
       const clip = item?.clips?.find((candidate) => candidate.name === String(action.name).toLowerCase());
       const source = isTripo ? "Tripo" : action.degraded ? "程序动画（超预算降级）" : "程序动画";
       const badge = isTripo ? (clip ? statusBadge(clip.status, clip.progress) : "⬜") : "✅ 运行时";
+      if (isTripo && (!clip || clip.status !== "ready")) {
+        gaps.push(`${badge} ${asset.name || asset.id} / ${action.name}${clip?.error ? `：${clip.error}` : ""}`);
+      }
       lines.push(
-        `| ${mdCell(asset.name || asset.id)} | ${mdCell(action.name)} | ${mdCell(action.scene)} | ${source} | ${isTripo ? `\`${action.preset}\`` : "—"} | ${isTripo ? 1 : 0} | ${badge} |`
+        `| ${mdCell(asset.name || asset.id)} | ${mdCell(action.name)} | ${mdCell(action.scene)} | ${source} | ${isTripo ? `\`${action.preset}\`` : "—"} | ${isTripo ? 1 : 0} | ${badge} | ${isTripo ? glbCells(clip?.runtimeUrl) : "— | —"} |`
       );
     }
+  }
+  lines.push("", "## 缺口回顾（计划 vs 实际）", "");
+  if (gaps.length) {
+    for (const gap of gaps) lines.push(`- ${gap}`);
+  } else {
+    lines.push("- ✅ 全部计划条目已落地，无缺口。");
   }
   lines.push("", "> 本文件由 sync-regeneration-status.mjs 自动覆盖维护，勿手工编辑。", "");
   const temporary = `${progressMdPath}.${process.pid}.tmp`;

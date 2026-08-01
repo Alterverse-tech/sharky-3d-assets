@@ -5,7 +5,7 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,6 +66,10 @@ assert.ok(row(round1, "run_upstairs").includes("⬜"), "run_upstairs row should 
 assert.ok(row(round1, "idle").includes("✅ 运行时"), "procedural idle row shows 运行时");
 assert.ok(round1.includes("preset:biped:run_upstairs"), "table keeps the preset column");
 assert.ok(round1.includes("警铃后沿旋转楼梯紧急登顶"), "table keeps the scene column");
+assert.ok(row(round1, "walk").includes("`/generated-assets/hero-walk.glb`"), "walk row carries the download url");
+assert.ok(row(round1, "walk").includes("`public/generated-assets/hero-walk.glb`"), "walk row carries the local path");
+assert.ok(round1.includes("## 缺口回顾"), "review section exists");
+assert.ok(round1.includes("⬜ 守夜人 / run_upstairs"), "pending run_upstairs is listed as a gap");
 
 // Round 2: run_upstairs clip lands; the file must be overwritten with ✅.
 writeFileSync(path.join(generated, "hero-run_upstairs.glb"), "glb-bytes");
@@ -75,5 +79,19 @@ console.log("── round 2 (run_upstairs 落盘后覆盖更新) ──");
 console.log(row(round2, "run_upstairs"));
 assert.ok(row(round2, "run_upstairs").includes("✅"), "run_upstairs row should flip to ✅ after the clip lands");
 assert.notEqual(round1, round2, "file must be overwritten in place");
+assert.ok(round2.includes("全部计划条目已落地，无缺口"), "review section reports no gaps when everything landed");
+
+// Round 3: with --base-url, download cells render as clickable full links.
+// (Status is unchanged since round 2, so remove the md to exercise the
+// missing-file rebuild path — in real use --base-url is passed from the start.)
+rmSync(path.join(work, "animation-plan-progress.md"));
+execFileSync(process.execPath, [sync, "--cwd", work, "--base-url", "http://127.0.0.1:4173"], { encoding: "utf8" });
+const round3 = readFileSync(path.join(work, "animation-plan-progress.md"), "utf8");
+assert.ok(
+  round3.includes("[hero-walk.glb](http://127.0.0.1:4173/generated-assets/hero-walk.glb)"),
+  "base-url renders clickable download links"
+);
+console.log("── round 3 (--base-url 可点击链接) ──");
+console.log(row(round3, "walk"));
 
 console.log("plan progress bench passed");
