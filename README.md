@@ -1,19 +1,4 @@
-
-
 # Shark Game Assets
-
-
-
-## Installation
-
-Install the skill globally using the [Skills CLI](https://skills.sh):
-
-```
-npx skills add https://github.com/Alterverse-tech/shark_game_assets \
-  --skill shark-game-assets \
-  -g
-```
-
 
 ## Documentation and downloads: 
 https://studio.13-216-49-19.sslip.io/generated-assets/site/
@@ -41,9 +26,22 @@ Ready-to-use GLB files are added to your project
 - **Agent-native workflow** — generate assets directly from Codex, Claude Code, or other skill-compatible coding agents
 - **Game-ready GLB output** — designed for Three.js, WebGL, and browser-based games
 - **Multiple asset categories** — players, enemies, NPCs, collectibles, props, and environmental objects
+- **Rigged characters with confirmed action sets** — walk by default; climb, run_upstairs, hurt, and 100+ catalog presets behind a user-confirmed action plan with per-character budgets
 - **Remote generation service** — no local GPU or 3D generation environment required
 - **Code and assets together** — let your agent build gameplay while producing the required models
 - **Rapid prototyping** — move from a game idea to a playable 3D experience faster
+
+## What's New (2026-08)
+
+**Action requirements confirmation gate.** Before generating any character or creature, the agent reads your game description or script, extracts the actions each entity actually needs, and presents an action requirements table — character/entity, action, triggering scene, suggested source, Tripo preset, and cost. Nothing is generated and no credits are spent until you explicitly confirm; add, remove, or swap rows and the table re-renders. The confirmed list is frozen as `animation-plan.json` and validated before the first remote call.
+
+**Full Tripo action catalog.** Characters are no longer limited to a walk clip. The bundled catalog (`scripts/preset-catalog.json`) opens the full Tripo retarget preset library: `climb`, `run_upstairs`, `hurt`, `jump`, combat, dance, and 100+ more on the v1.0 biped rig, plus per-rig-type locomotion presets on v2.5 (quadruped, aquatic, serpentine, and others). The default stays walk-only; extra actions are opt-in through the confirmed plan and ride the generation request as `assets[].animations`.
+
+**Cost budget with graceful degradation.** Each key character spends at most 3 Tripo retarget presets; secondary characters spend none. Over-budget rows are not rejected — they degrade to procedural runtime animation in confirmed order, with explicit `degraded` markers and validator warnings, so a confirmed plan always executes.
+
+**Live progress markdown.** During generation the confirmed table is mirrored to `animation-plan-progress.md`: per-row live status (⬜ pending / 🔄 running / ✅ done / ❌ failed), GLB download links and local paths as files land, and a closing plan-vs-actual gap review that doubles as the completion report. The file is atomically overwritten by the status synchronizer — open it in any editor to watch progress.
+
+**Preview page semantics.** For a fresh project the `/regeneration.html` progress page is generated and deployed (local server started and verified) before the first remote call; "restore" now applies only to pages that drifted from the contract.
 
 ## Installation
 
@@ -82,6 +80,17 @@ Use shark-game-assets to generate:
 
 Generate the models as game-ready GLB assets and integrate them into the game.
 ```
+
+For characters with animations, describe the plot beats that trigger each action — the agent proposes the action table for you to confirm before anything is generated:
+
+```
+Use shark-game-assets for a lighthouse keeper game in Three.js.
+
+Story: the keeper patrols the ground floor at night; when the storm alarm
+rings, he must rush up the spiral staircase to light the beacon in time.
+```
+
+The agent responds with an action requirements table (keeper: walk for the patrol, run_upstairs for the staircase dash, procedural idle) and waits for your confirmation before spending any generation credits.
 
 You can also request an individual asset:
 
@@ -157,8 +166,6 @@ Animation requirements: T-pose, suitable for humanoid rigging
 Game engine: Three.js
 Output format: GLB
 ```
-
-##   
 
 ## Get Access
 
