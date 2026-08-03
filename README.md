@@ -26,22 +26,28 @@ Ready-to-use GLB files are added to your project
 - **Agent-native workflow** — generate assets directly from Codex, Claude Code, or other skill-compatible coding agents
 - **Game-ready GLB output** — designed for Three.js, WebGL, and browser-based games
 - **Multiple asset categories** — players, enemies, NPCs, collectibles, props, and environmental objects
-- **Rigged characters with confirmed action sets** — walk by default; climb, run_upstairs, hurt, and 100+ catalog presets behind a user-confirmed action plan with per-character budgets
+- **Rigged characters with confirmed action sets** — walk by default; climb, run_upstairs, hurt, and 100+ catalog presets behind a user-confirmed action plan
 - **Remote generation service** — no local GPU or 3D generation environment required
 - **Code and assets together** — let your agent build gameplay while producing the required models
 - **Rapid prototyping** — move from a game idea to a playable 3D experience faster
 
 ## What's New (2026-08)
 
-**Action requirements confirmation gate.** Before generating any character or creature, the agent reads your game description or script, extracts the actions each entity actually needs, and presents an action requirements table — character/entity, action, triggering scene, suggested source, Tripo preset, and cost. Nothing is generated and no credits are spent until you explicitly confirm; add, remove, or swap rows and the table re-renders. The confirmed list is frozen as `animation-plan.json` and validated before the first remote call.
+**Action requirements confirmation gate.** Before generating any character or creature, the agent reads your game description or script, extracts the actions each entity actually needs, and presents an action requirements table — character/entity, action, triggering scene, suggested source, Tripo preset, and cost. Nothing is generated and no credits are spent until you explicitly confirm; add, remove, or swap rows and the table re-renders. The confirmed list is frozen as the run's action plan.
 
-**Full Tripo action catalog.** Characters are no longer limited to a walk clip. The bundled catalog (`scripts/preset-catalog.json`) opens the full Tripo retarget preset library: `climb`, `run_upstairs`, `hurt`, `jump`, combat, dance, and 100+ more on the v1.0 biped rig, plus per-rig-type locomotion presets on v2.5 (quadruped, aquatic, serpentine, and others). The default stays walk-only; extra actions are opt-in through the confirmed plan and ride the generation request as `assets[].animations`.
+<img src="docs/img/confirmation-gate.svg" alt="Game script → action requirements table → explicit confirmation → generate" width="100%" />
 
-**Cost budget with graceful degradation.** Each key character spends at most 3 Tripo retarget presets; secondary characters spend none. Over-budget rows are not rejected — they degrade to procedural runtime animation in confirmed order, with explicit `degraded` markers and validator warnings, so a confirmed plan always executes.
+**Full Tripo action catalog.** Characters are no longer limited to a walk clip. The bundled catalog (`scripts/preset-catalog.json`) opens the full Tripo retarget preset library: `climb`, `run_upstairs`, `hurt`, `jump`, combat, dance, and 100+ more on the v1.0 biped rig, plus per-rig-type locomotion presets on v2.5 (quadruped, aquatic, serpentine, and others). The default stays walk-only; extra actions are opt-in through the confirmed plan.
 
-**Live progress markdown.** During generation the confirmed table is mirrored to `animation-plan-progress.md`: per-row live status (⬜ pending / 🔄 running / ✅ done / ❌ failed), GLB download links and local paths as files land, and a closing plan-vs-actual gap review that doubles as the completion report. The file is atomically overwritten by the status synchronizer — open it in any editor to watch progress.
+<img src="docs/img/action-catalog.svg" alt="From walk-only to the full Tripo preset catalog" width="100%" />
 
-**Preview page semantics.** For a fresh project the `/regeneration.html` progress page is generated and deployed (local server started and verified) before the first remote call; "restore" now applies only to pages that drifted from the contract.
+**Live progress markdown with GLB links and gap review.** During generation the confirmed table is mirrored to `animation-plan-progress.md` and atomically overwritten as work lands — open it in any editor to watch progress:
+
+- per-row live status: ⬜ pending / 🔄 running % / ✅ done / ❌ failed
+- per-row GLB download link (clickable when the local server origin is passed via `--base-url`) and `public/` local path the moment each file lands
+- a closing plan-vs-actual gap review listing every row that has not landed, with failure reasons — when the run finishes it doubles as the completion report
+
+<img src="docs/img/progress-md.svg" alt="animation-plan-progress.md with live per-row status, GLB links, and gap review" width="100%" />
 
 ## Installation
 

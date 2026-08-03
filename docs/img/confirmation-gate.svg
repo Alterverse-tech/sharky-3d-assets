@@ -1,0 +1,90 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Noto Sans SC', sans-serif">
+  <defs>
+    <radialGradient id="bgGlow" cx="18%" cy="0%" r="90%">
+      <stop offset="0%" stop-color="#1B2440"/>
+      <stop offset="60%" stop-color="#0B0F1A"/>
+      <stop offset="100%" stop-color="#0B0F1A"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="accentSoft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366F1" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#22D3EE" stop-opacity="0.10"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="360" rx="24" fill="url(#bgGlow)"/>
+  <rect x="0.5" y="0.5" width="1199" height="359" rx="23.5" stroke="#263149"/>
+
+  <text x="48" y="58" font-size="21" font-weight="700" fill="#E6EAF2">Action requirements confirmation gate</text>
+  <text x="48" y="84" font-size="13.5" fill="#8B95A9">The agent proposes, you decide — zero credits spent before you confirm</text>
+
+  <!-- Stage 1: Game script -->
+  <g>
+    <rect x="48" y="116" width="212" height="176" rx="14" fill="#131A2B" stroke="#263149"/>
+    <rect x="48" y="116" width="212" height="3" rx="1.5" fill="url(#accent)"/>
+    <text x="70" y="152" font-size="14" font-weight="600" fill="#E6EAF2">1 · Game script</text>
+    <text x="70" y="180" font-size="12" fill="#8B95A9">"The keeper patrols the</text>
+    <text x="70" y="199" font-size="12" fill="#8B95A9">ground floor; when the</text>
+    <text x="70" y="218" font-size="12" fill="#8B95A9">alarm rings he rushes up</text>
+    <text x="70" y="237" font-size="12" fill="#8B95A9">the spiral staircase…"</text>
+    <rect x="70" y="254" width="94" height="22" rx="11" fill="#1B2440"/>
+    <text x="117" y="269" font-size="11" fill="#8B95A9" text-anchor="middle">plot beats in</text>
+  </g>
+  <path d="M268 204 h28 m0 0 l-8 -6 m8 6 l-8 6" stroke="#3D4A66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Stage 2: Action table -->
+  <g>
+    <rect x="304" y="116" width="330" height="176" rx="14" fill="#131A2B" stroke="#263149"/>
+    <rect x="304" y="116" width="330" height="3" rx="1.5" fill="url(#accent)"/>
+    <text x="326" y="152" font-size="14" font-weight="600" fill="#E6EAF2">2 · Action requirements table</text>
+    <!-- mini table -->
+    <g font-size="11.5">
+      <text x="326" y="180" fill="#8B95A9">角色</text>
+      <text x="392" y="180" fill="#8B95A9">动作</text>
+      <text x="497" y="180" fill="#8B95A9">触发场景</text>
+      <text x="596" y="180" fill="#8B95A9">消耗</text>
+      <line x1="326" y1="190" x2="612" y2="190" stroke="#263149"/>
+      <text x="326" y="211" fill="#E6EAF2">守夜人</text>
+      <text x="392" y="211" fill="#A5B4FC">walk</text>
+      <text x="497" y="211" fill="#8B95A9">底层巡视</text>
+      <text x="596" y="211" fill="#E6EAF2">1</text>
+      <text x="326" y="236" fill="#E6EAF2">守夜人</text>
+      <text x="392" y="236" fill="#A5B4FC">run_upstairs</text>
+      <text x="497" y="236" fill="#8B95A9">楼梯逃亡</text>
+      <text x="596" y="236" fill="#E6EAF2">1</text>
+      <text x="326" y="261" fill="#E6EAF2">守夜人</text>
+      <text x="392" y="261" fill="#A5B4FC">idle</text>
+      <text x="497" y="261" fill="#8B95A9">程序动画</text>
+      <text x="596" y="261" fill="#E6EAF2">0</text>
+    </g>
+  </g>
+  <path d="M642 204 h28 m0 0 l-8 -6 m8 6 l-8 6" stroke="#3D4A66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Stage 3: You confirm -->
+  <g>
+    <rect x="678" y="116" width="230" height="176" rx="14" fill="url(#accentSoft)" stroke="#6366F1" stroke-opacity="0.55"/>
+    <text x="700" y="152" font-size="14" font-weight="600" fill="#E6EAF2">3 · You confirm</text>
+    <text x="700" y="180" font-size="12" fill="#8B95A9">add / remove / swap rows —</text>
+    <text x="700" y="199" font-size="12" fill="#8B95A9">the table re-renders until</text>
+    <text x="700" y="218" font-size="12" fill="#8B95A9">it is exactly what you want</text>
+    <circle cx="712" cy="252" r="11" fill="none" stroke="#34D399" stroke-width="2"/>
+    <path d="M706.5 252 l4 4 l7 -8" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <text x="732" y="257" font-size="12.5" font-weight="600" fill="#34D399">explicit confirmation</text>
+  </g>
+  <path d="M916 204 h28 m0 0 l-8 -6 m8 6 l-8 6" stroke="#3D4A66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Stage 4: Generate -->
+  <g>
+    <rect x="952" y="116" width="200" height="176" rx="14" fill="#131A2B" stroke="#263149"/>
+    <rect x="952" y="116" width="200" height="3" rx="1.5" fill="url(#accent)"/>
+    <text x="974" y="152" font-size="14" font-weight="600" fill="#E6EAF2">4 · Generate</text>
+    <text x="974" y="180" font-size="12" fill="#8B95A9">frozen plan drives the</text>
+    <text x="974" y="199" font-size="12" fill="#8B95A9">whole run — models, rig,</text>
+    <text x="974" y="218" font-size="12" fill="#8B95A9">action clips, manifest</text>
+    <rect x="974" y="240" width="156" height="24" rx="12" fill="#1B2440"/>
+    <text x="1052" y="256" font-size="11.5" fill="#22D3EE" text-anchor="middle">0 credits before step 3</text>
+  </g>
+</svg>

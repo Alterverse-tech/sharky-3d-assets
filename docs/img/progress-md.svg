@@ -1,0 +1,85 @@
+<svg width="1200" height="420" viewBox="0 0 1200 420" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Noto Sans SC', sans-serif">
+  <defs>
+    <radialGradient id="bgGlow3" cx="50%" cy="0%" r="95%">
+      <stop offset="0%" stop-color="#16203A"/>
+      <stop offset="60%" stop-color="#0B0F1A"/>
+      <stop offset="100%" stop-color="#0B0F1A"/>
+    </radialGradient>
+    <linearGradient id="accent3" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="420" rx="24" fill="url(#bgGlow3)"/>
+  <rect x="0.5" y="0.5" width="1199" height="419" rx="23.5" stroke="#263149"/>
+
+  <text x="48" y="58" font-size="21" font-weight="700" fill="#E6EAF2">Live progress markdown</text>
+  <text x="48" y="84" font-size="13.5" fill="#8B95A9">The confirmed table, mirrored to a file and atomically overwritten as every GLB lands — open it in any editor</text>
+
+  <!-- editor window -->
+  <g>
+    <rect x="48" y="104" width="1104" height="284" rx="14" fill="#0F1626" stroke="#263149"/>
+    <rect x="48" y="104" width="1104" height="40" rx="14" fill="#131A2B"/>
+    <rect x="48" y="130" width="1104" height="14" fill="#131A2B"/>
+    <circle cx="76" cy="124" r="6" fill="#FF5F57"/>
+    <circle cx="98" cy="124" r="6" fill="#FEBC2E"/>
+    <circle cx="120" cy="124" r="6" fill="#28C840"/>
+    <text x="600" y="129" font-size="12.5" fill="#8B95A9" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, monospace">animation-plan-progress.md</text>
+    <rect x="1016" y="112" width="118" height="24" rx="12" fill="#1B2440"/>
+    <circle cx="1032" cy="124" r="4" fill="#34D399"/>
+    <text x="1078" y="128" font-size="11" fill="#8B95A9" text-anchor="middle">live · auto-sync</text>
+
+    <!-- table header -->
+    <g font-size="12.5">
+      <text x="84" y="176" fill="#8B95A9">角色/实体</text>
+      <text x="196" y="176" fill="#8B95A9">动作</text>
+      <text x="320" y="176" fill="#8B95A9">触发动作场景描述</text>
+      <text x="560" y="176" fill="#8B95A9">Preset</text>
+      <text x="790" y="176" fill="#8B95A9">状态</text>
+      <text x="884" y="176" fill="#8B95A9">GLB（下载 / 本地路径）</text>
+      <line x1="84" y1="188" x2="1116" y2="188" stroke="#263149"/>
+    </g>
+
+    <!-- rows -->
+    <g font-size="12.5">
+      <text x="84" y="214" fill="#E6EAF2">守夜人</text>
+      <text x="196" y="214" fill="#8B95A9">（基础模型）</text>
+      <text x="320" y="214" fill="#8B95A9">—</text>
+      <text x="560" y="214" fill="#8B95A9">—</text>
+      <text x="790" y="214" fill="#34D399">✅</text>
+      <text x="884" y="214" fill="#22D3EE" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="11.5" text-decoration="underline">hero.glb</text>
+      <text x="960" y="214" fill="#5B6779" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="11.5">public/generated-assets/hero.glb</text>
+
+      <text x="84" y="248" fill="#E6EAF2">守夜人</text>
+      <text x="196" y="248" fill="#A5B4FC" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="11.5">walk</text>
+      <text x="320" y="248" fill="#8B95A9">底层巡视、普通移动</text>
+      <text x="560" y="248" fill="#A5B4FC" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="11.5">preset:biped:walk</text>
+      <text x="790" y="248" fill="#34D399">✅</text>
+      <text x="884" y="248" fill="#22D3EE" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="11.5" text-decoration="underline">hero-walk.glb</text>
+      <text x="994" y="248" fill="#5B6779" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="11.5">public/…/hero-walk.glb</text>
+
+      <text x="84" y="282" fill="#E6EAF2">守夜人</text>
+      <text x="196" y="282" fill="#A5F3FC" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="11.5">run_upstairs</text>
+      <text x="320" y="282" fill="#8B95A9">警铃后沿旋转楼梯紧急登顶</text>
+      <text x="560" y="282" fill="#A5B4FC" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="11.5">preset:biped:run_upstairs</text>
+      <text x="790" y="282" fill="#F59E0B">🔄 62%</text>
+      <rect x="884" y="272" width="120" height="8" rx="4" fill="#1B2440"/>
+      <rect x="884" y="272" width="74" height="8" rx="4" fill="url(#accent3)"/>
+
+      <text x="84" y="316" fill="#E6EAF2">守夜人</text>
+      <text x="196" y="316" fill="#A5B4FC" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="11.5">idle</text>
+      <text x="320" y="316" fill="#8B95A9">停步、观察、登顶点火前</text>
+      <text x="560" y="316" fill="#8B95A9">—（程序动画）</text>
+      <text x="790" y="316" fill="#34D399">✅ 运行时</text>
+      <text x="884" y="316" fill="#5B6779">—</text>
+    </g>
+
+    <line x1="84" y1="334" x2="1116" y2="334" stroke="#263149"/>
+
+    <!-- gap review -->
+    <text x="84" y="362" font-size="13" font-weight="700" fill="#E6EAF2">## 缺口回顾（计划 vs 实际）</text>
+    <text x="104" y="374" font-size="12" fill="#8B95A9"> </text>
+    <text x="84" y="378" font-size="12" fill="#F59E0B">- ⬜ 守夜人 / run_upstairs — 生成中，落盘后此行自动变 ✅</text>
+  </g>
+</svg>

@@ -1,0 +1,75 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Noto Sans SC', sans-serif">
+  <defs>
+    <radialGradient id="bgGlow2" cx="85%" cy="0%" r="90%">
+      <stop offset="0%" stop-color="#132437"/>
+      <stop offset="60%" stop-color="#0B0F1A"/>
+      <stop offset="100%" stop-color="#0B0F1A"/>
+    </radialGradient>
+    <linearGradient id="accent2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="320" rx="24" fill="url(#bgGlow2)"/>
+  <rect x="0.5" y="0.5" width="1199" height="319" rx="23.5" stroke="#263149"/>
+
+  <text x="48" y="58" font-size="21" font-weight="700" fill="#E6EAF2">Full Tripo action catalog</text>
+  <text x="48" y="84" font-size="13.5" fill="#8B95A9">From a single walk clip to the entire retarget preset library — extras are opt-in via the confirmed plan</text>
+
+  <!-- Before card -->
+  <g>
+    <rect x="48" y="116" width="280" height="156" rx="14" fill="#131A2B" stroke="#263149"/>
+    <text x="70" y="148" font-size="12" font-weight="600" fill="#8B95A9" letter-spacing="1">BEFORE</text>
+    <rect x="70" y="166" width="196" height="30" rx="15" fill="#1B2440" stroke="#3D4A66"/>
+    <text x="168" y="186" font-size="12.5" fill="#A5B4FC" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, monospace">preset:biped:walk</text>
+    <text x="70" y="228" font-size="12" fill="#8B95A9">walk-only default,</text>
+    <text x="70" y="247" font-size="12" fill="#8B95A9">idle as runtime motion</text>
+  </g>
+
+  <path d="M340 194 h32 m0 0 l-9 -7 m9 7 l-9 7" stroke="url(#accent2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Now card -->
+  <g>
+    <rect x="388" y="116" width="764" height="156" rx="14" fill="#131A2B" stroke="#263149"/>
+    <rect x="388" y="116" width="764" height="3" rx="1.5" fill="url(#accent2)"/>
+    <text x="410" y="148" font-size="12" font-weight="600" fill="#22D3EE" letter-spacing="1">NOW</text>
+    <rect x="452" y="134" width="212" height="20" rx="10" fill="#0F1626"/>
+    <text x="558" y="148" font-size="11" fill="#8B95A9" text-anchor="middle">v1.0 biped · 101 presets · max 3 / character</text>
+
+    <!-- preset chips row 1 -->
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="12">
+      <rect x="410" y="166" width="64" height="26" rx="13" fill="#1B2440" stroke="#6366F1" stroke-opacity="0.6"/>
+      <text x="442" y="183" fill="#C7D2FE" text-anchor="middle">climb</text>
+      <rect x="482" y="166" width="118" height="26" rx="13" fill="#1B2440" stroke="#22D3EE" stroke-opacity="0.6"/>
+      <text x="541" y="183" fill="#A5F3FC" text-anchor="middle">run_upstairs</text>
+      <rect x="608" y="166" width="58" height="26" rx="13" fill="#1B2440" stroke="#3D4A66"/>
+      <text x="637" y="183" fill="#E6EAF2" text-anchor="middle">hurt</text>
+      <rect x="674" y="166" width="58" height="26" rx="13" fill="#1B2440" stroke="#3D4A66"/>
+      <text x="703" y="183" fill="#E6EAF2" text-anchor="middle">jump</text>
+      <rect x="740" y="166" width="64" height="26" rx="13" fill="#1B2440" stroke="#3D4A66"/>
+      <text x="772" y="183" fill="#E6EAF2" text-anchor="middle">slash</text>
+      <rect x="812" y="166" width="64" height="26" rx="13" fill="#1B2440" stroke="#3D4A66"/>
+      <text x="844" y="183" fill="#E6EAF2" text-anchor="middle">shoot</text>
+      <rect x="884" y="166" width="86" height="26" rx="13" fill="#1B2440" stroke="#3D4A66"/>
+      <text x="927" y="183" fill="#E6EAF2" text-anchor="middle">dance_01</text>
+      <rect x="978" y="166" width="58" height="26" rx="13" fill="#1B2440" stroke="#3D4A66"/>
+      <text x="1007" y="183" fill="#E6EAF2" text-anchor="middle">swim</text>
+      <rect x="1044" y="166" width="86" height="26" rx="13" fill="#0F1626" stroke="#3D4A66" stroke-dasharray="4 3"/>
+      <text x="1087" y="183" fill="#8B95A9" text-anchor="middle">+93 more</text>
+    </g>
+
+    <!-- v2.5 row -->
+    <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="12">
+      <rect x="410" y="204" width="150" height="26" rx="13" fill="#1B2440" stroke="#3D4A66"/>
+      <text x="485" y="221" fill="#E6EAF2" text-anchor="middle">quadruped:walk</text>
+      <rect x="568" y="204" width="140" height="26" rx="13" fill="#1B2440" stroke="#3D4A66"/>
+      <text x="638" y="221" fill="#E6EAF2" text-anchor="middle">aquatic:march</text>
+      <rect x="716" y="204" width="170" height="26" rx="13" fill="#1B2440" stroke="#3D4A66"/>
+      <text x="801" y="221" fill="#E6EAF2" text-anchor="middle">serpentine:march</text>
+      <rect x="894" y="204" width="146" height="26" rx="13" fill="#0F1626" stroke="#3D4A66" stroke-dasharray="4 3"/>
+      <text x="967" y="221" fill="#8B95A9" text-anchor="middle">hexapod / octopod</text>
+    </g>
+    <text x="410" y="256" font-size="11.5" fill="#8B95A9">v2.5 creature rigs · one locomotion preset per skeleton type</text>
+  </g>
+</svg>
