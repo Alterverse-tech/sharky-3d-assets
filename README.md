@@ -47,7 +47,7 @@ Ready-to-use GLB files are added to your project
 - per-row GLB download link (clickable when the local server origin is passed via `--base-url`) and `public/` local path the moment each file lands
 - a closing plan-vs-actual gap review listing every row that has not landed, with failure reasons — when the run finishes it doubles as the completion report
 
-<img src="docs/img/progress-md.svg" alt="animation-plan-progress.md with live per-row status, GLB links, and gap review" width="100%" />
+<img src="docs/img/progress-md.svg" alt="animation-plan-progress.md with live per-row status and GLB links" width="100%" />
 
 ## Installation
 
