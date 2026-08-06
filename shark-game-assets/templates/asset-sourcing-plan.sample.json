@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "schema": "shark-asset-sourcing-plan",
+  "runId": "fog-lighthouse-20260806-01",
+  "confirmation": {
+    "confirmed": true,
+    "confirmedBy": "user",
+    "confirmedAt": "2026-08-06T12:00:00.000Z"
+  },
+  "slots": [
+    {
+      "id": "player-loan",
+      "name": "洛安",
+      "role": "player",
+      "assetKind": "character",
+      "tier": "key",
+      "rigModel": "v1.0-20240301",
+      "rigType": "biped",
+      "model": {
+        "source": "reuse_asset_center",
+        "assetId": "ast_speed_bro",
+        "resolved": {
+          "modelPath": "public/assets/asset-center/speed-bro--ast_speed_bro/model.glb",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "sizeBytes": 441804
+        }
+      },
+      "actions": [
+        {
+          "name": "run",
+          "scene": "Shift 加速移动",
+          "source": "reuse_linked_action",
+          "assetId": "ast_speed_run",
+          "parentAssetId": "ast_speed_bro",
+          "resolved": {
+            "origin": "asset_center",
+            "modelPath": "public/assets/asset-center/speed-run--ast_speed_run/model.glb",
+            "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "sizeBytes": 509000
+          }
+        },
+        {
+          "name": "idle",
+          "scene": "停止移动",
+          "source": "runtime_procedural",
+          "cost": 0
+        }
+      ]
+    },
+    {
+      "id": "patrol-guard",
+      "name": "巡逻机械守卫",
+      "role": "enemy",
+      "assetKind": "character",
+      "tier": "key",
+      "rigModel": "v1.0-20240301",
+      "rigType": "biped",
+      "model": { "source": "generate_new", "generator": "tripo" },
+      "actions": [
+        {
+          "name": "walk",
+          "scene": "码头与仓库巡逻",
+          "source": "generate_action",
+          "generator": "tripo",
+          "preset": "preset:biped:walk",
+          "cost": 1,
+          "generationRoute": { "id": "tripo-generated-base", "supportedForReusedBase": false }
+        }
+      ]
+    },
+    {
+      "id": "energy-crystal",
+      "name": "能源晶体",
+      "role": "collectible",
+      "assetKind": "prop",
+      "tier": "secondary",
+      "rigModel": "v1.0-20240301",
+      "rigType": "biped",
+      "model": { "source": "generate_new", "generator": "tripo" },
+      "actions": [
+        {
+          "name": "hover",
+          "scene": "等待拾取时悬浮旋转",
+          "source": "runtime_procedural",
+          "cost": 0
+        }
+      ]
+    }
+  ]
+}

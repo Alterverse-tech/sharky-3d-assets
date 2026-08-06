@@ -20,7 +20,7 @@ Before taking task actions with this skill, perform a best-effort self-update ch
 
 ## Required behavior
 
-- For every task that generates, regenerates, rigs, animates, or integrates GLB assets, create or restore the canonical local preview/progress page by default, even when the user did not ask for it. In a fresh project this stage is a generate-and-deploy, not a restore: create the page files from the bundled template and start (or reuse) the local server so `/regeneration.html` is verifiably served before the first remote asset call — and narrate it to the user as generating/deploying, saying "restore" only when the page previously existed. Make the current-run plan and preview setup the first local asset action after locating the workspace, before remote calls or GLB integration, then keep status synchronized until the task finishes.
+- For every task that generates, regenerates, rigs, animates, or integrates GLB assets, complete the asset sourcing confirmation gate before any import or generation. After confirmation, create or restore the canonical local preview/progress page by default, even when the user did not ask for it. In a fresh project this stage is a generate-and-deploy, not a restore: create the page files from the bundled template and start (or reuse) the local server so `/regeneration.html` is verifiably served before the first remote generation call — and narrate it to the user as generating/deploying, saying "restore" only when the page previously existed. Keep status synchronized until the task finishes.
 - Skip the default preview only for publish-only requests, help/explanation-only requests, readiness-only or other read-only inspection that does not generate/integrate asset files, or when the user explicitly declines a preview page.
 - If the game prompt contains explicit or implicit entities, such as a player, character, enemy, collectible, vehicle, weapon, obstacle, boss, mascot, key prop, or environment object, GLB generation is a required stage when the tool is available.
 - Generate only 1-3 key assets by default. Prioritize the player/main character first, then the gameplay-critical enemy, collectible, vehicle, hazard, or key prop. Do not generate decorative filler.
@@ -29,6 +29,7 @@ Before taking task actions with this skill, perform a best-effort self-update ch
 - For regeneration work with concrete characters or critical entity props, use the Gemini-Tripo branch (`route: "gemini_reference"`) for those key assets and keep that set to 1-5 models total. If the client/API batch cap is lower than the requested total, split into multiple generate calls.
 - For secondary static props that do not need strong visual control or rigged animation, use the faster Tripo branch (`route: "tripo"`) and keep that set to 3-10 models total. Do not include decorative filler just to reach the lower bound.
 - Before generating or wiring any character/creature action clips (including the default `walk` from the `gemini_reference` continuation), complete the action requirements confirmation gate: understand the game description, present the action requirements table, apply the user's edits, and proceed only after the user's explicit confirmation. See "Action requirements confirmation (animation planning gate)".
+- When the Asset Center personal-assets Plugin is available, its one final sourcing-board confirmation also satisfies the action requirements confirmation gate. Do not ask for a second confirmation over the same model/action choices.
 - Use primitive Three.js geometry only as an interim placeholder while assets are pending and as the runtime fallback if a GLB fails to load.
 - Use the configured asset-generation service as a public anonymous endpoint from Codex, Claude Code, other compatible agent clients, and direct CLI installs. Do not request, read, send, store, mention, or expose any client credential; asset-generation users need neither a login nor a token.
 - If the asset service is unreachable or a platform policy blocks the remote call, pause the asset workflow and report that the asset service is temporarily unavailable. Do not ask the user for credentials and do not silently replace requested GLB generation with local placeholders.
@@ -93,6 +94,45 @@ Use `gemini_reference` when visual control matters; this is the Gemini-Tripo bra
 
 Use `auto` only when you are comfortable with the server choosing from the prompt. If in doubt, choose the route yourself and pass it explicitly.
 
+## Asset sourcing confirmation gate (reuse before generation)
+
+For a game or story with concrete model/action requirements, inspect reusable assets before generation. Codex remains the orchestrator: this Skill does not import another Skill's implementation. Use the personal-assets MCP tools when installed and keep the fallback usable when they are absent.
+
+The required order is:
+
+```text
+extract model/action requirements
+→ inspect current project imports
+→ list Asset Center catalog once
+→ build sourcing proposal
+→ render fullscreen progressive sourcing board
+→ wait for one final confirmation
+→ write and validate asset-sourcing-plan.json
+→ pull only selected reuse_asset_center items
+→ derive plans
+→ generate only asset-generation-request.json gaps
+```
+
+1. Extract the key model slots and every semantic action with its triggering scene. Inspect `asset_manifest.json`, `asset-center.lock.json`, and loadable local GLBs before querying remote inventory.
+2. If `list_asset_catalog` is available, call it once for the sourcing pass. Match the complete returned catalog; do not issue one search per slot. If the tool is absent or the call fails, report `库存查询失败/暂不可用`. A failed query is not an empty library and must never be described as “没有资产”.
+3. Call `propose_asset_manifest` with the model/action requirements and model-selected recommendation evidence. Pass the returned `shark-asset-sourcing-proposal` to `render_asset_sourcing_board`. The fullscreen MCP App is the primary interaction; the markdown table is the fallback in hosts without MCP Apps.
+4. The user may change every base model and nested action. A base change invalidates linked actions from the previous parent. `reuse_compatible_action` is selectable only with verified compatibility. Wait for the single `确认资产方案并开始制作` action; do not import, generate, rig, animate, or modify game code before it.
+5. Save the confirmed result as `asset-sourcing-plan.json`, then validate it:
+
+```bash
+node <skill-dir>/scripts/validate-asset-sourcing-plan.mjs --cwd "$(pwd)"
+```
+
+6. Pull only final `model.source=reuse_asset_center` models and `reuse_linked_action|reuse_compatible_action` Asset Center actions. Copy each verified import receipt's `modelPath`, `sha256`, and `sizeBytes` into the corresponding `resolved` field; project reuse needs a safe local `modelPath`. Never persist signed URLs. Re-run with the local-file gate:
+
+```bash
+node <skill-dir>/scripts/validate-asset-sourcing-plan.mjs --cwd "$(pwd)" --require-resolved
+node <skill-dir>/scripts/derive-asset-plans.mjs --cwd "$(pwd)"
+```
+
+7. The derivation writes `regeneration-plan.json`, `animation-plan.json`, and `asset-generation-request.json`. Reused action rows use `source: "asset_center"` or `source: "project"`, cost zero, and a safe local runtime URL. Only `asset-generation-request.json` gaps may enter model/action generation calls. Reused GLBs under `public/assets/` and generated GLBs under `public/generated-assets/` must both appear in `/regeneration.html`.
+8. If the personal-assets Plugin is unavailable, preserve current-project reuse, show the proposed generation gaps in chat, and ask once whether to continue. Do not silently bypass the gate.
+
 ## Action requirements confirmation (animation planning gate)
 
 Whenever a task will generate character/creature action clips (including the default `walk` produced by the `gemini_reference` continuation) or wire new action animations into game code, complete this gate before the first generate/animate call. Static-prop-only tasks, publish-only tasks, and help/readiness-only requests skip it.
@@ -108,7 +148,7 @@ Whenever a task will generate character/creature action clips (including the def
 | Detective (key) | idle | 站立待机 | Procedural runtime | — | 0 |
 | Patrol guard (secondary) | walk | 走廊往返巡逻 | Procedural fallback | — | 0 |
 
-4. The user may add, remove, or modify rows. Re-render the table after every change. Do not call generate/animate and do not modify game code until the user replies with an explicit confirmation of the current list.
+4. The user may add, remove, or modify rows. Re-render the table after every change. Do not call generate/animate and do not modify game code until the user replies with an explicit confirmation of the current list. When the Asset Center sourcing board already captured the same action choices, reuse that confirmation instead of asking again.
 5. Budget rules the proposal must satisfy (the validator enforces them):
    - `key` assets: at most 3 Tripo presets each (`budget.tripoPresetsPerKeyAsset`).
    - `secondary` assets: 0 Tripo presets; they use procedural/runtime animation.
@@ -185,7 +225,8 @@ Natural-language trigger examples that do not explicitly name the skill:
 For asset generation or integration tasks, prefer MCP tools named `mcp__game_assets__*` when available. Otherwise run the bundled client via Bash. Both expose the same readiness, generate, and animate operations. Skip this workflow for a publish-only request.
 
 1. Run `pwd` if you do not already know the current workspace path.
-2. Write the current task's actual `regeneration-plan.json`, then create/restore the preview, reset derived status for that plan, and start the synchronizer before making any asset API call or changing integration code:
+2. Complete the asset sourcing confirmation gate. Inspect project imports, read the Asset Center catalog once when available, render the progressive board, wait for its one final confirmation, pull only selected reuse items, resolve local paths, and run `derive-asset-plans.mjs`. Do not make a generation call or change integration code before this step.
+3. Use the derived `regeneration-plan.json` to create/restore the preview, reset derived status for that plan, and start the synchronizer before making any asset generation API call or changing integration code:
 
 ```bash
 node <skill-dir>/scripts/setup-regeneration-preview.mjs \
@@ -199,15 +240,15 @@ node <skill-dir>/scripts/sync-regeneration-status.mjs \
 ```
 
    Start or reuse a local server and verify it serves `/regeneration.html` before the first generate/animate call — deploying the page is part of asset work, not optional polish. Only when the environment cannot open a local listener, say so explicitly and continue with the file-level preview. For an integration-only task with existing local GLBs, populate the plan from `asset_manifest.json`, run the same setup/synchronizer, and make existing base/action GLBs previewable before changing integration code. These preview actions are local-only.
-3. If the task will generate or wire character/creature actions, complete the action requirements confirmation gate first: draft the table from the game description, wait for the user's explicit confirmation, freeze `animation-plan.json`, and run `validate-animation-plan.mjs`. Do not proceed to generate/animate before it passes.
-4. Call the configured public asset API without requesting or sending a login or client token. Platform or sandbox restrictions still apply.
-5. If planning 3 or more assets, or if this is the first asset generation in the thread, check readiness (`<skill-dir>` is this skill's directory):
+4. Run `validate-animation-plan.mjs` on the derived plan. If the sourcing board was unavailable and the task will generate or wire character/creature actions, use the standalone action requirements table fallback first. Do not ask twice when the sourcing board already captured the same choices.
+5. Call the configured public asset API without requesting or sending a login or client token. Platform or sandbox restrictions still apply.
+6. If planning 3 or more generated assets, or if this is the first asset generation in the thread, check readiness (`<skill-dir>` is this skill's directory):
 
 ```bash
 node <skill-dir>/scripts/game-assets-mcp.mjs readiness --cwd "$(pwd)"
 ```
 
-6. Generate the selected asset set. By default generate 1-3 assets (batch max 4). For explicit game-regeneration requests, follow the quantity limits above: 1-5 Gemini-Tripo key entity models, and optionally 3-10 Tripo static prop models. Split into multiple generate calls when a desired set is larger than the current client/API batch cap. Pass parameters as one JSON object:
+7. Generate only the entries in `asset-generation-request.json`. By default generate 1-3 assets (batch max 4). For explicit game-regeneration requests, follow the quantity limits above: 1-5 Gemini-Tripo key entity models, and optionally 3-10 Tripo static prop models. Split into multiple generate calls when a desired set is larger than the current client/API batch cap. Pass parameters as one JSON object:
 
 ```bash
 node <skill-dir>/scripts/game-assets-mcp.mjs generate --cwd "$(pwd)" --params '{
@@ -222,10 +263,10 @@ node <skill-dir>/scripts/game-assets-mcp.mjs generate --cwd "$(pwd)" --params '{
    - On `gemini_reference`, character/creature assets are automatically rigged after GLB generation. The default `animationClips` set contains only `walk`; if Tripo retarget failed, expect main-GLB fallback fields `animations: ["Walk"]` and `animationSource: "procedural_native_clips"`. A missing idle clip is normal.
    - `force`: only when the user explicitly asked to regenerate assets.
    - The command reports concise progress on stderr while polling (typically 1-3 minutes per batch), then prints JSON on stdout; exit code 1 means the batch failed.
-7. After the command returns, read `asset_manifest.json` from `cwd`. Treat that file as the source of truth and keep the preview synchronizer running until every successful local GLB/action appears.
-8. Wire `manifest.assets` into the game code with Three.js `GLTFLoader`. Treat the manifest as a semantic registry: choose assets by `bindings`, `id`, or `role`, and choose animations by `actions.<name>.url` or legacy `animationClips[].name`/`preset`, never by guessing file names or folders.
-9. Keep a local primitive fallback for every generated asset. The game must remain playable when a GLB fails to load.
-10. Run `validate-regeneration-preview.mjs`, then stop the synchronizer normally after final status and manifest are stable.
+8. After the command returns, merge reused and generated entries into `asset_manifest.json`. Treat that file as the source of truth and keep the preview synchronizer running until every successful local GLB/action appears.
+9. Wire `manifest.assets` into the game code with Three.js `GLTFLoader`. Treat the manifest as a semantic registry: choose assets by `bindings`, `id`, or `role`, and choose animations by `actions.<name>.url` or legacy `animationClips[].name`/`preset`, never by guessing file names or folders.
+10. Keep a local primitive fallback for every generated or reused asset. The game must remain playable when a GLB fails to load.
+11. Run `validate-regeneration-preview.mjs`, then stop the synchronizer normally after final status and manifest are stable.
 
 ## Publish a completed game to the Shark portal
 

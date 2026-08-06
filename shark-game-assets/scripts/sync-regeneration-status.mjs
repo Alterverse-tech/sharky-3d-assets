@@ -62,12 +62,17 @@ function normalizePlan(raw) {
     seen.add(id);
     const actionSource = rawItem.actions || rawItem.clips || [];
     const actions = [...new Set(actionSource.map((action) => String(action?.name || action).split(":").at(-1).toLowerCase()).filter(Boolean))];
+    const actionRuntimeUrls = Object.fromEntries(actionSource
+      .filter((action) => action && typeof action === "object" && action.name)
+      .map((action) => [String(action.name).toLowerCase(), runtimeUrlOf(action)]));
     return {
       id,
       name: String(rawItem.name || id),
       role: String(rawItem.role || rawItem.gameplayRole || "prop"),
+      source: String(rawItem.source || "generated"),
       runtimeUrl: runtimeUrlOf(rawItem),
-      actions
+      actions,
+      actionRuntimeUrls
     };
   });
   return {
@@ -78,8 +83,8 @@ function normalizePlan(raw) {
   };
 }
 
-function emptyClip(name) {
-  return { name, status: "pending", progress: 0, runtimeUrl: "", error: "" };
+function emptyClip(name, runtimeUrl = "") {
+  return { name, status: "pending", progress: 0, runtimeUrl, error: "" };
 }
 
 function emptyItem(item) {
@@ -87,10 +92,11 @@ function emptyItem(item) {
     id: item.id,
     name: item.name,
     role: item.role,
+    source: item.source,
     status: "pending",
     progress: 0,
     runtimeUrl: item.runtimeUrl,
-    clips: item.actions.map(emptyClip),
+    clips: item.actions.map((name) => emptyClip(name, item.actionRuntimeUrls[name] || "")),
     error: ""
   };
 }
@@ -112,12 +118,14 @@ function runtimeUrlOf(value) {
         continue;
       }
     }
-    const publicIndex = clean.indexOf("/public/generated-assets/");
-    if (publicIndex >= 0) clean = clean.slice(publicIndex + "/public".length);
-    if (clean.startsWith("public/generated-assets/")) clean = `/${clean.slice("public/".length)}`;
+    const publicIndex = ["/public/generated-assets/", "/public/assets/"].map((needle) => clean.indexOf(needle)).find((index) => index >= 0);
+    if (publicIndex !== undefined) clean = clean.slice(publicIndex + "/public".length);
+    if (clean.startsWith("public/generated-assets/") || clean.startsWith("public/assets/")) clean = `/${clean.slice("public/".length)}`;
     if (clean.startsWith("./generated-assets/")) clean = `/${clean.slice(2)}`;
+    if (clean.startsWith("./assets/")) clean = `/${clean.slice(2)}`;
     if (clean.startsWith("generated-assets/")) clean = `/${clean}`;
-    if (clean.startsWith("/generated-assets/")) return clean;
+    if (clean.startsWith("assets/")) clean = `/${clean}`;
+    if (clean.startsWith("/generated-assets/") || clean.startsWith("/assets/")) return clean;
   }
   return "";
 }
@@ -217,8 +225,11 @@ function runtimeFilePath(runtimeUrl) {
   const relative = runtimeUrl.split(/[?#]/, 1)[0].replace(/^\/+/, "");
   const publicDir = path.resolve(cwd, "public");
   const generatedRoot = path.resolve(publicDir, "generated-assets");
+  const assetsRoot = path.resolve(publicDir, "assets");
   const file = path.resolve(publicDir, relative);
-  if (file === generatedRoot || !file.startsWith(`${generatedRoot}${path.sep}`)) return null;
+  const inGenerated = file !== generatedRoot && file.startsWith(`${generatedRoot}${path.sep}`);
+  const inAssets = file !== assetsRoot && file.startsWith(`${assetsRoot}${path.sep}`);
+  if (!inGenerated && !inAssets) return null;
   return file;
 }
 
@@ -320,22 +331,25 @@ async function writeAnimationPlanProgress(statusDoc, changed) {
   for (const asset of animationPlan.assets) {
     const item = itemsById.get(asset.id);
     const baseBadge = item ? statusBadge(item.status, item.progress) : "⬜";
+    const baseSource = item?.source === "asset_center" ? "Asset Center" : item?.source === "project" ? "项目已有" : "模型生成";
     if (!item || item.status !== "ready") {
       gaps.push(`${baseBadge} ${asset.name || asset.id} /（基础模型）${item?.error ? `：${item.error}` : ""}`);
     }
     lines.push(
-      `| ${mdCell(asset.name || asset.id)} | （基础模型） | — | 模型生成 | — | — | ${baseBadge} | ${glbCells(item?.runtimeUrl)} |`
+      `| ${mdCell(asset.name || asset.id)} | （基础模型） | — | ${baseSource} | — | — | ${baseBadge} | ${glbCells(item?.runtimeUrl)} |`
     );
     for (const action of asset.actions || []) {
       const isTripo = action.source === "tripo";
+      const isReused = action.source === "asset_center" || action.source === "project";
       const clip = item?.clips?.find((candidate) => candidate.name === String(action.name).toLowerCase());
-      const source = isTripo ? "Tripo" : action.degraded ? "程序动画（超预算降级）" : "程序动画";
-      const badge = isTripo ? (clip ? statusBadge(clip.status, clip.progress) : "⬜") : "✅ 运行时";
-      if (isTripo && (!clip || clip.status !== "ready")) {
+      const source = isTripo ? "Tripo" : action.source === "asset_center" ? "Asset Center" : action.source === "project" ? "项目已有" : action.degraded ? "程序动画（超预算降级）" : "程序动画";
+      const hasGlb = isTripo || isReused;
+      const badge = hasGlb ? (clip ? statusBadge(clip.status, clip.progress) : "⬜") : "✅ 运行时";
+      if (hasGlb && (!clip || clip.status !== "ready")) {
         gaps.push(`${badge} ${asset.name || asset.id} / ${action.name}${clip?.error ? `：${clip.error}` : ""}`);
       }
       lines.push(
-        `| ${mdCell(asset.name || asset.id)} | ${mdCell(action.name)} | ${mdCell(action.scene)} | ${source} | ${isTripo ? `\`${action.preset}\`` : "—"} | ${isTripo ? 1 : 0} | ${badge} | ${isTripo ? glbCells(clip?.runtimeUrl) : "— | —"} |`
+        `| ${mdCell(asset.name || asset.id)} | ${mdCell(action.name)} | ${mdCell(action.scene)} | ${source} | ${isTripo ? `\`${action.preset}\`` : "—"} | ${isTripo ? 1 : 0} | ${badge} | ${hasGlb ? glbCells(clip?.runtimeUrl) : "— | —"} |`
       );
     }
   }

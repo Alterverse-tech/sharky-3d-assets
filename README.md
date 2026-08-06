@@ -33,6 +33,8 @@ Ready-to-use GLB files are added to your project
 
 ## What's New (2026-08)
 
+**Reuse before generate.** When the Asset Center personal-assets Plugin is installed, the agent first inspects current-project imports, reads the personal catalog once, and opens a native-feeling fullscreen MCP App sourcing board. Every base model and nested action can be previewed and changed. One final confirmation freezes the plan; only selected Asset Center files are imported and only remaining gaps are sent to generation. Reused and generated GLBs then share the same `/regeneration.html` progress view.
+
 **Action requirements confirmation gate.** Before generating any character or creature, the agent reads your game description or script, extracts the actions each entity actually needs, and presents an action requirements table — character/entity, action, triggering scene, suggested source, Tripo preset, and cost. Nothing is generated and no credits are spent until you explicitly confirm; add, remove, or swap rows and the table re-renders. The confirmed list is frozen as the run's action plan.
 
 <img src="docs/img/confirmation-gate.svg" alt="Game script → action requirements table → explicit confirmation → generate" width="100%" />

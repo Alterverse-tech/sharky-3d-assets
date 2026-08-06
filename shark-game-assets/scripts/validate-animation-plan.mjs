@@ -129,8 +129,14 @@ if (plan && catalog) {
         }
       } else if (action?.source === "procedural") {
         if (action.preset) errors.push(`${label}: procedural actions must not carry a Tripo preset`);
+      } else if (action?.source === "asset_center" || action?.source === "project") {
+        if (action.preset) errors.push(`${label}: reused actions must not carry a Tripo preset`);
+        if (typeof action.runtimeUrl !== "string" || (!action.runtimeUrl.startsWith("/assets/") && !action.runtimeUrl.startsWith("/generated-assets/"))) {
+          errors.push(`${label}: reused action requires a safe runtimeUrl under /assets/ or /generated-assets/`);
+        }
+        if (action.cost !== undefined && action.cost !== 0) errors.push(`${label}: reused action cost must be 0`);
       } else {
-        errors.push(`${label}: source must be "tripo" or "procedural"`);
+        errors.push(`${label}: source must be "tripo", "procedural", "asset_center", or "project"`);
       }
     }
 

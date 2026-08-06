@@ -4,7 +4,7 @@
 // back to the prebuilt bundle, and the result must pass the preview validator.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -55,6 +55,14 @@ record(
 // C. the standard validator accepts the clean-room result
 const validate = run(validateScript, ["--cwd", work]);
 record("C: validate-regeneration-preview passes", validate.status === 0, validate.status === 0 ? "" : validate.stdout.slice(-160));
+
+// C2. imported Asset Center GLBs under public/assets are valid ready files.
+mkdirSync(path.join(work, "public", "assets", "asset-center", "hero"), { recursive: true });
+writeFileSync(path.join(work, "public", "assets", "asset-center", "hero", "model.glb"), "glb-bytes");
+writeFileSync(path.join(work, "regeneration-plan.json"), JSON.stringify({ version: 1, runId: "reused", items: [{ id: "hero", name: "Hero", role: "player", actions: [] }] }));
+writeFileSync(path.join(work, "public", "regeneration-status.json"), JSON.stringify({ status: "ready", runId: "reused", items: [{ id: "hero", name: "Hero", role: "player", status: "ready", progress: 100, runtimeUrl: "/assets/asset-center/hero/model.glb", clips: [], error: "" }] }));
+const reusedValidate = run(validateScript, ["--cwd", work]);
+record("C2: validator accepts reused /assets GLBs", reusedValidate.status === 0, reusedValidate.status === 0 ? "" : reusedValidate.stdout.slice(-180));
 
 // D. drift detection: the prebuilt bundle must have been built from the
 // current template source (edit the template -> rebuild bundle + meta)

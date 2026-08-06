@@ -41,18 +41,19 @@ function requirePatterns(file, source, patterns) {
 }
 
 function runtimeFile(runtimeUrl) {
-  if (typeof runtimeUrl !== "string" || !runtimeUrl.startsWith("/generated-assets/")) return null;
+  if (typeof runtimeUrl !== "string" || (!runtimeUrl.startsWith("/generated-assets/") && !runtimeUrl.startsWith("/assets/"))) return null;
   const publicDir = path.resolve(cwd, "public");
   const generatedRoot = path.resolve(publicDir, "generated-assets");
+  const assetsRoot = path.resolve(publicDir, "assets");
   const file = path.resolve(publicDir, runtimeUrl.replace(/^\/+/, "").split(/[?#]/, 1)[0]);
-  if (!file.startsWith(`${generatedRoot}${path.sep}`)) return null;
+  if (!file.startsWith(`${generatedRoot}${path.sep}`) && !file.startsWith(`${assetsRoot}${path.sep}`)) return null;
   return file;
 }
 
 async function validateReadyFile(owner, runtimeUrl) {
   const file = runtimeFile(runtimeUrl);
   if (!file) {
-    errors.push(`${owner}: ready runtimeUrl must be under /generated-assets/`);
+    errors.push(`${owner}: ready runtimeUrl must be under /generated-assets/ or /assets/`);
     return;
   }
   try {
