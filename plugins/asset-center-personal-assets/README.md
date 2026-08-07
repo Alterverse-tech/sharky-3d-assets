@@ -2,7 +2,7 @@
 
 This plugin lets Codex read the current Asset Center owner's complete library in grouped Static GLB, Action GLB, and Procedural Prop sections, show candidates for selection, and import verified local GLB copies into a game workspace.
 
-Version `0.4.2` adds a contextual character-authoring recommendation to the fullscreen MCP App sourcing board. When a character or linked-action reuse gap remains, the user can explicitly open Asset Center's character designer; publishing the character and its action GLBs lets future game tasks recommend the static model and its linked actions. The Plugin retains the best-effort Git marketplace update bootstrap introduced in `0.4.1`.
+Version `0.4.3` makes the fullscreen MCP App sourcing board the primary story-driven experience. It opens fullscreen for multi-asset plans, uses a clearer three-column decision layout, keeps the right inspector useful for both reusable and not-yet-generated assets, and preserves one final sticky confirmation. It also keeps the contextual character-authoring recommendation introduced in `0.4.2`, so users can explicitly open Asset Center's character designer when a reusable character or linked action is missing. Proposal data, Widget rendering, and confirmation remain separate tools so non-App clients retain a structured fallback.
 
 ## Configure
 

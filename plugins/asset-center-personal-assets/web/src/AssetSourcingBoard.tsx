@@ -4,7 +4,7 @@ import { Badge } from "@openai/apps-sdk-ui/components/Badge";
 import { Button } from "@openai/apps-sdk-ui/components/Button";
 import { RadioGroup } from "@openai/apps-sdk-ui/components/RadioGroup";
 import { createRoot } from "react-dom/client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   callTool,
@@ -108,6 +108,18 @@ function shouldRecommendCharacterDesign(slot: any, selected: any) {
   return !hasReusableModel || selected.model.source === "generate_new" || Boolean(missingLinkedAction);
 }
 
+function modelSourceCopy(source: string) {
+  if (source === "reuse_project") return { label: "项目复用", tone: "success" as const };
+  if (source === "reuse_asset_center") return { label: "资产中心", tone: "info" as const };
+  if (source === "generate_new") return { label: "新生成", tone: "warning" as const };
+  return { label: "Fallback", tone: "secondary" as const };
+}
+
+function slotChoiceAsset(slot: any, choice: any): Asset | null {
+  const candidates = [...(slot.model.projectCandidates ?? []), ...modelAssets(slot)];
+  return candidates.find((entry: Asset) => entry.id === choice?.model?.assetId) ?? null;
+}
+
 function CandidateRow({ entry, selected, onFocus }: { entry: Asset; selected: boolean; onFocus: () => void }) {
   return (
     <span className="candidate-row" data-selected={selected} onMouseEnter={onFocus} onClick={onFocus}>
@@ -125,6 +137,7 @@ export function AssetSourcingBoard() {
   const [focused, setFocused] = useState<Asset | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const fullscreenRequested = useRef(false);
 
   useEffect(() => subscribeToolOutput((output) => {
     const next = output?.proposal ?? output;
@@ -145,12 +158,21 @@ export function AssetSourcingBoard() {
   const summary = useMemo(() => proposal && choices ? totals(proposal, choices) : null, [proposal, choices]);
 
   useEffect(() => {
+    if (!proposal || fullscreenRequested.current) return;
+    fullscreenRequested.current = true;
+    if (proposal.slots.length > 1) void requestFullscreen();
+  }, [proposal]);
+
+  useEffect(() => {
     if (!activeSlot || focused) return;
     setFocused(modelAssets(activeSlot)[0] ?? null);
   }, [activeSlot, focused]);
 
   if (!proposal || !choices || !activeSlot || !selected || !summary) return <div className="loading">等待资产方案…</div>;
   const recommendCharacterDesign = shouldRecommendCharacterDesign(activeSlot, selected);
+
+  const selectedAsset = slotChoiceAsset(activeSlot, selected);
+  const selectedSource = modelSourceCopy(selected.model.source);
 
   const updateModel = (value: string) => {
     const model = parseModelValue(value);
@@ -160,8 +182,8 @@ export function AssetSourcingBoard() {
       next.slots[activeSlot.id].actions = Object.fromEntries(activeSlot.actions.map((action: any) => [action.name, defaultActionChoice(action, model)]));
       return next;
     });
-    const asset = modelAssets(activeSlot).find((entry) => entry.id === model.assetId);
-    if (asset) setFocused(asset);
+    const asset = slotChoiceAsset(activeSlot, { model });
+    setFocused(asset ?? null);
   };
 
   const updateAction = (actionName: string, value: string) => {
@@ -191,22 +213,28 @@ export function AssetSourcingBoard() {
   return (
     <main className="sourcing-shell">
       <header className="sourcing-header">
-        <div><h1 className="sourcing-title">关键资产来源确认</h1><p className="sourcing-subtitle">{proposal.gameSummary ?? "先复用已有资产，只生成最终缺口"}</p></div>
-        <Button color="secondary" variant="soft" onClick={() => void requestFullscreen()}>全屏选择</Button>
+        <div className="header-copy"><span className="eyebrow">ASSET SOURCING</span><h1 className="sourcing-title">关键资产来源确认</h1><p className="sourcing-subtitle">{proposal.gameSummary ?? "先复用已有资产，只生成最终缺口"}</p></div>
+        <div className="header-actions"><div className="quick-summary"><span>{proposal.slots.length} 个资产</span><span>{summary.generatedModels} 个新模型</span><span>预计消耗 {summary.tripoCost}</span></div><Button color="secondary" variant="soft" onClick={() => void requestFullscreen()}>全屏选择</Button></div>
       </header>
       {error ? <div className="error-banner">{error}</div> : null}
       <div className="sourcing-workspace">
         <nav className="sourcing-rail" aria-label="资产槽位">
-          {proposal.slots.map((slot: any) => <button type="button" className="slot-button" data-active={slot.id === activeSlot.id} key={slot.id} onClick={() => { setActiveSlotId(slot.id); setFocused(modelAssets(slot)[0] ?? null); }}><strong>{slot.name}</strong><span>{slot.role} · {slot.actions.length} 个动作</span></button>)}
+          <div className="rail-label">资产清单</div>
+          {proposal.slots.map((slot: any, index: number) => {
+            const choice = choices.slots[slot.id];
+            const source = modelSourceCopy(choice?.model?.source ?? slot.model.defaultSource);
+            return <button type="button" className="slot-button" data-active={slot.id === activeSlot.id} key={slot.id} onClick={() => { setActiveSlotId(slot.id); setFocused(slotChoiceAsset(slot, choice) ?? modelAssets(slot)[0] ?? null); }}><span className="slot-index">{String(index + 1).padStart(2, "0")}</span><span className="slot-copy"><strong>{slot.name}</strong><span>{slot.role} · {slot.actions.length} 个动作</span></span><span className="slot-state" data-tone={source.tone}>{source.label}</span></button>;
+          })}
         </nav>
         <section className="sourcing-options">
-          <div className="section-heading"><h2>{activeSlot.name}</h2><Badge color={activeSlot.model.confidence === "high" ? "success" : "warning"}>{activeSlot.model.confidence} 置信度</Badge></div>
-          <p className="action-scene">{activeSlot.model.reason ?? "请选择本体来源"}</p>
+          <div className="section-heading asset-heading"><div><span className="section-kicker">{activeSlot.assetKind} · {activeSlot.tier}</span><h2>{activeSlot.name}</h2></div><Badge color={activeSlot.model.confidence === "high" ? "success" : "warning"}>{activeSlot.model.confidence} 置信度</Badge></div>
+          <p className="decision-note">{activeSlot.model.reason ?? "请选择本体来源"}</p>
+          <div className="choice-label">模型来源</div>
           <RadioGroup aria-label={`${activeSlot.name}本体来源`} direction="col" value={modelValue(selected.model)} onChange={updateModel}>
             {activeSlot.model.projectCandidates?.map((entry: Asset) => <RadioGroup.Item block key={entry.id} value={`reuse_project:${entry.id}`}>{entry.displayName} · 项目已有</RadioGroup.Item>)}
             {modelAssets(activeSlot).map((entry) => <RadioGroup.Item block key={entry.id} value={`reuse_asset_center:${entry.id}`}><CandidateRow entry={entry} selected={selected.model.assetId === entry.id} onFocus={() => setFocused(entry)} /></RadioGroup.Item>)}
-            <RadioGroup.Item block value="generate_new">生成新模型</RadioGroup.Item>
-            <RadioGroup.Item block value="primitive_fallback">Primitive 兜底</RadioGroup.Item>
+            <RadioGroup.Item block value="generate_new"><span className="source-option"><span><strong>生成新模型</strong><small>{activeSlot.model.generator ?? "按当前游戏风格创建原创 GLB"}</small></span>{activeSlot.model.defaultSource === "generate_new" ? <Badge color="warning" pill>推荐</Badge> : null}</span></RadioGroup.Item>
+            <RadioGroup.Item block value="primitive_fallback"><span className="source-option"><span><strong>Primitive 兜底</strong><small>保持玩法可运行，不作为最终视觉资产</small></span></span></RadioGroup.Item>
           </RadioGroup>
           {recommendCharacterDesign ? <aside className="character-design-cta"><div><strong>为以后积累可复用人物与动作</strong><p>在资产中心设计并发布人物模型及动作 GLB，后续游戏可自动推荐同一人物的静态模型和关联动作。</p></div><Button color="secondary" variant="soft" onClick={() => void openExternalLink(CHARACTER_DESIGNER_URL)}>设计人物资产</Button></aside> : null}
           <div className="actions">
@@ -219,8 +247,10 @@ export function AssetSourcingBoard() {
           </div>
         </section>
         <aside className="sourcing-inspector">
-          {focused?.previewUrl ? <iframe key={focused.id} className="inspector-preview" src={focused.previewUrl} title={`${focused.displayName} 3D 预览`} sandbox="allow-scripts allow-same-origin" referrerPolicy="no-referrer" /> : focused?.thumbnailUrl ? <img className="inspector-image" src={focused.thumbnailUrl} alt={focused.displayName} /> : <div className="inspector-preview inspector-empty">暂无 3D 预览</div>}
-          <div className="inspector-copy"><h2>{focused?.displayName ?? "选择一个候选"}</h2><p>{focused?.description ?? "聚焦候选后可查看描述、动画和大小。"}</p><div className="inspector-tags">{focused?.classification ? <Badge color="info">{focused.classification}</Badge> : null}{focused?.animations?.map((name) => <Badge color="secondary" key={name}>{name}</Badge>)}</div>{focused?.sizeBytes ? <p>大小：{(focused.sizeBytes / 1_000_000).toFixed(2)} MB</p> : null}</div>
+          <div className="inspector-label">方案预览</div>
+          {focused?.previewUrl ? <iframe key={focused.id} className="inspector-preview" src={focused.previewUrl} title={`${focused.displayName} 3D 预览`} sandbox="allow-scripts allow-same-origin" referrerPolicy="no-referrer" /> : focused?.thumbnailUrl ? <img className="inspector-image" src={focused.thumbnailUrl} alt={focused.displayName} /> : <div className="inspector-preview generation-preview"><span className="generation-orbit"/><span className="generation-core">{selected.model.source === "generate_new" ? "NEW" : "GLB"}</span><span>{selected.model.source === "generate_new" ? "等待生成后显示 3D 模型" : "暂无可用预览"}</span></div>}
+          <div className="inspector-copy"><div className="inspector-title-row"><h2>{focused?.displayName ?? selectedAsset?.displayName ?? (selected.model.source === "generate_new" ? "原创模型生成方案" : "当前模型方案")}</h2><Badge color={selectedSource.tone}>{selectedSource.label}</Badge></div><p>{focused?.description ?? selectedAsset?.description ?? activeSlot.model.reason ?? "确认后将按当前选择处理该资产。"}</p><div className="inspector-tags"><Badge color="secondary">{activeSlot.assetKind}</Badge><Badge color="secondary">{activeSlot.tier}</Badge>{activeSlot.rigType ? <Badge color="info">{activeSlot.rigType}</Badge> : null}{focused?.classification ? <Badge color="info">{focused.classification}</Badge> : null}{focused?.animations?.map((name) => <Badge color="secondary" key={name}>{name}</Badge>)}</div>{focused?.sizeBytes ? <p>大小：{(focused.sizeBytes / 1_000_000).toFixed(2)} MB</p> : null}</div>
+          {activeSlot.actions.length ? <div className="inspector-actions"><span>动作计划</span>{activeSlot.actions.map((action: any) => <div key={action.name}><strong>{action.name}</strong><small>{selected.actions[action.name]?.source === "generate_action" ? `生成 · ${action.cost ?? 0} 消耗` : selected.actions[action.name]?.source === "runtime_procedural" ? "运行时 · 0 消耗" : "复用 / 兜底"}</small></div>)}</div> : null}
         </aside>
       </div>
       <footer className="sourcing-footer"><div className="totals"><span>导入 {summary.imports}</span><span>生成模型 {summary.generatedModels}</span><span>生成动作 {summary.generatedActions}</span><span>运行时 {summary.runtimeActions}</span><span>Fallback {summary.fallbacks}</span><span>预计消耗 {summary.tripoCost}</span></div><Button color="primary" size="lg" loading={pending} disabled={pending} onClick={() => void confirm()}>确认资产方案并开始制作</Button></footer>

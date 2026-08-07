@@ -9,7 +9,7 @@ import { sourcingBoardHtml } from "./sourcing-board-resource.mjs";
 import { buildSourcingProposal, normalizeConfirmedSourcingPlan } from "./sourcing-contract.mjs";
 
 const SERVER_NAME = "asset-center-personal-assets";
-const SERVER_VERSION = "0.4.2";
+const SERVER_VERSION = "0.4.3";
 const PROTOCOL_VERSION = "2024-11-05";
 const DEFAULT_API_BASE_URL = "https://studio.13-216-49-19.sslip.io/codex/v1";
 const DEFAULT_TARGET_DIRECTORY = "public/assets/asset-center";
