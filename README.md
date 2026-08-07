@@ -21,7 +21,18 @@
 
 `shark-game-assets` is an agent skill for generating game-ready `.glb` assets while building Three.js and WebGL games.
 
-Describe the asset you need, and your coding agent can generate players, enemies, collectibles, props, and environmental objects through the Shark Game Assets remote generation service.
+
+
+
+
+
+> **claude code,confirm and use your exists model or create new one**
+<img width="1768" height="890" alt="ChatGPT Image Aug 7, 2026, 08_46_28 PM" src="https://github.com/user-attachments/assets/2a56d4a7-3a05-4a10-bd70-308dcf972a59" />
+
+
+> **codex,confirm and use your exists model or create new one**
+<img width="1768" height="890" alt="ChatGPT Image Aug 7, 2026, 08_46_28 PM" src="https://github.com/user-attachments/assets/cf48d165-7f02-49fe-a941-75fc9045ec77" />
+
 
 ```
 Describe your game
