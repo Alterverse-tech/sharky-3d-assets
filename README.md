@@ -31,7 +31,8 @@
 
 
 > **codex,confirm and use your exists model or create new one**
-<img width="1768" height="890" alt="ChatGPT Image Aug 7, 2026, 08_46_28 PM" src="https://github.com/user-attachments/assets/cf48d165-7f02-49fe-a941-75fc9045ec77" />
+<img width="3430" height="1926" alt="image" src="https://github.com/user-attachments/assets/28cbe92b-be36-459d-b922-2c1101e73713" />
+
 
 
 ```
