@@ -156,12 +156,16 @@ claude plugin install asset-center-personal-assets@sharky-3d-assets
 
 If installation or its verification fails, report the failure and ask whether the user wants to correct setup or continue without personal Asset Center reuse. Never silently treat installation failure as installed.
 
-After a successful install, tell the user to configure `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex or Claude Code without pasting it into chat. On macOS desktop hosts, a safe terminal pattern is:
+After a successful install, tell the user to configure `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex or Claude Code without pasting it into chat. For Codex Desktop, tell the user exactly, without paraphrasing:
 
-```bash
+```text
+按 Ctrl+C 取消后，正确顺序是：
 read -s ASSET_CENTER_SERVICE_TOKEN
+
+此时只粘贴新的令牌并回车，然后再执行：
 launchctl setenv ASSET_CENTER_SERVICE_TOKEN "$ASSET_CENTER_SERVICE_TOKEN"
-unset ASSET_CENTER_SERVICE_TOKEN
+
+最后完全退出并重启 Codex Desktop。
 ```
 
 Then fully restart the host and start a new Codex thread or fresh Claude Code session so the Plugin skills and MCP tools are discovered. Do not claim the Plugin is usable in the current session. Successful installation is a terminal state for the current asset workflow: stop so the user can continue in that fresh session.

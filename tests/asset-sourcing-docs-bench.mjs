@@ -42,6 +42,7 @@ assert.ok(skill.includes("Only run installation commands after explicit confirma
 assert.ok(skill.includes("The user-chosen \"install\" action authorizes those commands now"), "install flow must execute immediately after confirmation");
 assert.ok(skill.includes("Never silently treat installation failure as installed"), "installation failure must not be silently ignored");
 assert.ok(skill.includes("start a new Codex thread"), "newly installed Plugin needs a new-thread boundary");
+assert.ok(skill.includes("按 Ctrl+C 取消后，正确顺序是：\nread -s ASSET_CENTER_SERVICE_TOKEN\n\n此时只粘贴新的令牌并回车，然后再执行：\nlaunchctl setenv ASSET_CENTER_SERVICE_TOKEN \"$ASSET_CENTER_SERVICE_TOKEN\"\n\n最后完全退出并重启 Codex Desktop。"), "Codex Desktop token instructions must remain verbatim");
 assert.ok(skill.includes("https://studio.13-216-49-19.sslip.io/asset-center/characters/new"), "character gaps must link to the Asset Center designer");
 assert.ok(skill.includes("validate-asset-sourcing-plan.mjs"));
 assert.ok(skill.includes("derive-asset-plans.mjs"));
