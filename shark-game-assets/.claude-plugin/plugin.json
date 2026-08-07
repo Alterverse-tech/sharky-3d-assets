@@ -1,0 +1,10 @@
+{
+  "name": "shark-game-assets",
+  "description": "Generate, rig, preview, and wire key GLB assets for 3D web games through the Shark Game Assets service, with reuse-before-generate sourcing and user-confirmed action plans.",
+  "author": {
+    "name": "Shark Studio"
+  },
+  "homepage": "https://github.com/Alterverse-tech/sharky-3d-assets",
+  "repository": "https://github.com/Alterverse-tech/sharky-3d-assets",
+  "keywords": ["3d", "glb", "game-assets", "threejs", "tripo"]
+}

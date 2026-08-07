@@ -100,20 +100,20 @@ claude plugin marketplace list
 claude plugin list
 ```
 
-Use the same component identities: Skill `shark-game-assets`, marketplace `sharky-3d-assets`, plugin `asset-center-personal-assets` from marketplace `sharky-3d-assets`.
+Use the same component identities: Skill `shark-game-assets`, marketplace `sharky-3d-assets`, plugin `asset-center-personal-assets` from marketplace `sharky-3d-assets`. The Skill counts as present when it appears either as a global skills-CLI installation (`npx skills list -g`) or as the Claude plugin `shark-game-assets@sharky-3d-assets`; never install both variants.
 
 ### 3. Install only missing components
-
-If the global Skill is missing, run:
-
-```bash
-npx skills add https://github.com/Alterverse-tech/sharky-3d-assets --skill shark-game-assets -g -y
-```
 
 If the marketplace is missing, run:
 
 ```bash
 claude plugin marketplace add Alterverse-tech/sharky-3d-assets
+```
+
+If the Skill is missing in both forms, run this after the marketplace is available:
+
+```bash
+claude plugin install shark-game-assets@sharky-3d-assets
 ```
 
 If the Plugin is missing, run this only after the marketplace is available:
