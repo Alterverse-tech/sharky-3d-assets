@@ -11,10 +11,11 @@
 </div>
 
 ```text
-Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md and install Shark Game Assets for me.
+/goal Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md to install the Shark Game Assets Skill and Asset Center Plugin, then set up a new task for me.
 ```
 
-<img width="2390" height="1496" alt="image" src="https://github.com/user-attachments/assets/8cfaee9a-f5fa-4aaa-a948-1d3a37960f31" />
+
+
 
 > **Generate production-ready 3D game assets without leaving your coding workflow.**
 
