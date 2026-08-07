@@ -30,6 +30,8 @@ for (const phrase of ordered) {
 assert.ok(skill.includes("A failed query is not an empty library"), "catalog failure must not be described as an empty library");
 assert.ok(skill.includes("Plugin bootstrap owns its startup and update check"), "Skill must keep the Plugin startup boundary explicit");
 assert.ok(skill.includes("Asset Center Plugin 未安装"), "missing Plugin must produce a clear one-time prompt");
+assert.ok(skill.includes("The Asset Center Plugin is optional"), "Plugin installation must remain a user choice");
+assert.ok(skill.includes("continue without personal Asset Center reuse"), "unavailable Plugin must offer the confirmed no-plugin route");
 assert.ok(skill.includes("never present a primitive-only prototype as the completed game"), "named-entity games must not be delivered as primitive-only prototypes");
 assert.ok(skill.includes("canonical preview/progress, GLB generation or reuse, manifest update, and GLTF integration"), "the completed-game contract must require the full asset workflow");
 assert.ok(skill.includes("Asset Center Plugin 会将你历史制作的模型云端保存"), "Plugin prompt must explain the asset-reuse value");

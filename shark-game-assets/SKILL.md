@@ -114,9 +114,9 @@ The Plugin bootstrap owns its startup and update check. This Skill never install
 
 ### One-time Plugin onboarding
 
-When `list_asset_catalog`, `propose_asset_manifest`, and the other personal-assets tools are all absent, distinguish that from an installed Plugin whose API/auth call failed. For the absent-tools case, immediately stop the asset workflow and ask once per game asset task:
+When `list_asset_catalog`, `propose_asset_manifest`, and the other personal-assets tools are all absent, distinguish that from an installed Plugin whose API/auth call failed. The Asset Center Plugin is optional: for the absent-tools case, pause the asset workflow and ask once per game asset task whether the user wants its reuse capabilities before continuing.
 
-> 检测到 Asset Center Plugin 未安装。本次资产流程已暂停，等待你的选择。
+> 检测到 Asset Center Plugin 未安装。本次资产流程已暂停，等待你选择是否安装。
 >
 > Asset Center Plugin 会将你历史制作的模型云端保存；制作新游戏时，它会优先推荐可复用资产，只生成当前缺口：
 >
@@ -128,7 +128,7 @@ When `list_asset_catalog`, `propose_asset_manifest`, and the other personal-asse
 > - [模型资产中心](https://github.com/Alterverse-tech/sharky-3d-assets)
 > - [人物模型设计](https://studio.13-216-49-19.sslip.io/asset-center/characters/new)
 >
-> 安装后可先预览并选择要复用的资产。是否现在安装？（推荐）
+> 安装后可先预览并选择要复用的资产；不安装也可以在确认资产方案后生成新的 GLB。是否现在安装？（推荐）
 
 Do not inspect the catalog, create a sourcing proposal, import, generate, rig, animate, or modify game code while this choice is unresolved. Only run installation commands after explicit confirmation. The user-chosen "install" action authorizes those commands now, but never authorizes continuing the asset workflow.
 
@@ -154,7 +154,7 @@ claude plugin marketplace add Alterverse-tech/sharky-3d-assets
 claude plugin install asset-center-personal-assets@sharky-3d-assets
 ```
 
-If installation or its verification fails, report the failure and stop the current asset workflow. Do not offer a no-install continuation, generation-gap plan, current-project reuse, or automatic retry. Never silently treat installation failure as installed.
+If installation or its verification fails, report the failure and ask whether the user wants to correct setup or continue without personal Asset Center reuse. Never silently treat installation failure as installed.
 
 After a successful install, tell the user to configure `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex or Claude Code without pasting it into chat. On macOS desktop hosts, a safe terminal pattern is:
 
@@ -164,20 +164,22 @@ launchctl setenv ASSET_CENTER_SERVICE_TOKEN "$ASSET_CENTER_SERVICE_TOKEN"
 unset ASSET_CENTER_SERVICE_TOKEN
 ```
 
-Then fully restart the host and start a new Codex thread or fresh Claude Code session so the Plugin skills and MCP tools are discovered. Do not claim the Plugin is usable in the current session. Successful installation is a terminal state for the current asset workflow: stop rather than continuing with a fallback. If the user chooses not to install, has already declined it in this task, or installation fails, stop the asset workflow. Do not preserve current-project reuse, show generation gaps, ask whether to continue, or otherwise bypass the sourcing gate. Never turn an installed Plugin's auth/API failure into an install prompt.
+Then fully restart the host and start a new Codex thread or fresh Claude Code session so the Plugin skills and MCP tools are discovered. Do not claim the Plugin is usable in the current session. Successful installation is a terminal state for the current asset workflow: stop so the user can continue in that fresh session.
 
-If the Plugin is installed but `ASSET_CENTER_SERVICE_TOKEN` is missing, unavailable to the host process, invalid, or rejected, report the specific configuration/authentication state and stop the asset workflow. Do not ask the user to paste a token, do not use any fallback, and do not continue after showing setup instructions. The same stop rule applies when a personal-assets MCP request fails or the Asset Center catalog is unavailable; a failed query is never an empty catalog.
+If the user declines installation, has already declined it in this task, or explicitly chooses to continue without the Plugin, inspect only current-project `asset_manifest.json`, `asset-center.lock.json`, and local GLBs. Present the same model/action requirements as a Markdown sourcing table, wait for explicit confirmation, then generate only the confirmed gaps. Do not claim the unavailable personal catalog is empty or import a historical Asset Center item without a current selection.
+
+If the Plugin is installed but `ASSET_CENTER_SERVICE_TOKEN` is missing, unavailable to the host process, invalid, or rejected, report the specific configuration/authentication state and ask whether the user wants to correct setup or continue without personal Asset Center reuse. Do not ask the user to paste a token. The same choice applies when a personal-assets MCP request fails or the Asset Center catalog is unavailable; a failed query is never an empty catalog.
 
 The required order is:
 
 ```text
-Plugin installed and discovered in a fresh session
-→ ASSET_CENTER_SERVICE_TOKEN available to that host process
+choose Plugin reuse or no-plugin route
+→ Plugin route: installed and discovered in a fresh session with `ASSET_CENTER_SERVICE_TOKEN`
+→ no-plugin route: inspect current-project local assets only
 → extract model/action requirements
 → inspect current project imports
-→ list Asset Center catalog once
-→ build sourcing proposal
-→ render business sourcing table
+→ Plugin route: list Asset Center catalog once, build sourcing proposal, render business sourcing table
+→ no-plugin route: render the equivalent Markdown sourcing table
 → wait for one final confirmation
 → write and validate asset-sourcing-plan.json
 → pull only selected reuse_asset_center items
@@ -186,8 +188,8 @@ Plugin installed and discovered in a fresh session
 ```
 
 1. Extract the key model slots and every semantic action with its triggering scene. Inspect `asset_manifest.json`, `asset-center.lock.json`, and loadable local GLBs before querying remote inventory.
-2. Call `list_asset_catalog` once for the sourcing pass. Match the complete returned catalog; do not issue one search per slot. If the tool is absent, the token is missing/invalid, or the call fails, report the specific reason and stop the asset workflow. Do not produce a local-reuse, generation-only, or project-import fallback. A failed query is not an empty library and must never be described as “没有资产”.
-3. Call `propose_asset_manifest` with the model/action requirements and model-selected recommendation evidence. Include a concise noun-phrase `entityLabel` for every requirement; do not copy the full requirement description or append internal tier values such as `(key)`. Include the model entry scene plus exact presentation wording for each asset requirement when needed. Pass the returned `shark-asset-sourcing-proposal` to `render_asset_sourcing_board`. The MCP App's primary interaction is the complete confirmation table with exactly these columns in this order: 角色/实体、资产需求、选项、当前选择、候选方案（点击预览）、模型来源、动作、触发场景、动作来源、复用状态. Character and creature model groups use 人物/主体; non-living groups use 道具 and 道具动作. Candidate names use real HTTP/HTTPS preview URLs; clicking one lets the user choose 在 Codex 中打开 or 在系统浏览器打开. Absent candidates have no placeholder row. Every 资产需求 is single-choice, changing the base resets incompatible actions, linked actions require the matching Asset Center base, and the footer contains only the final confirmation button with no cost or summary statistics. 刷新资产 asks Codex to reload the full catalog and rebuild the proposal without importing or generating. The markdown table is a presentation fallback only when the personal-assets MCP catalog and proposal calls succeeded but the host cannot render the MCP App; it is never a fallback for a missing or failed Plugin.
+2. If the user chose Plugin reuse and `list_asset_catalog` is available, call it once for the sourcing pass. Match the complete returned catalog; do not issue one search per slot. If the tool, token, or catalog call is unavailable, report the specific reason and ask whether to continue without personal Asset Center reuse. A failed query is not an empty library and must never be described as “没有资产”. If the user chose the no-plugin route, skip the remote catalog and inspect only the current project's local assets.
+3. On the Plugin route, call `propose_asset_manifest` with the model/action requirements and model-selected recommendation evidence. Include a concise noun-phrase `entityLabel` for every requirement; do not copy the full requirement description or append internal tier values such as `(key)`. Include the model entry scene plus exact presentation wording for each asset requirement when needed. Pass the returned `shark-asset-sourcing-proposal` to `render_asset_sourcing_board`. The MCP App's primary interaction is the complete confirmation table with exactly these columns in this order: 角色/实体、资产需求、选项、当前选择、候选方案（点击预览）、模型来源、动作、触发场景、动作来源、复用状态. Character and creature model groups use 人物/主体; non-living groups use 道具 and 道具动作. Candidate names use real HTTP/HTTPS preview URLs; clicking one lets the user choose 在 Codex 中打开 or 在系统浏览器打开. Absent candidates have no placeholder row. Every 资产需求 is single-choice, changing the base resets incompatible actions, linked actions require the matching Asset Center base, and the footer contains only the final confirmation button with no cost or summary statistics. 刷新资产 asks Codex to reload the full catalog and rebuild the proposal without importing or generating. On the no-plugin route, render the same columns as a Markdown sourcing table with only local candidates and `generate_new` gaps.
 4. The user may change every base model and nested action. A base change invalidates linked actions from the previous parent. `reuse_compatible_action` is selectable only with verified compatibility. Wait for the single `确认资产方案并开始制作` action; do not import, generate, rig, animate, or modify game code before it.
 5. Save the confirmed result as `asset-sourcing-plan.json`, then validate it:
 
@@ -203,7 +205,7 @@ node <skill-dir>/scripts/derive-asset-plans.mjs --cwd "$(pwd)"
 ```
 
 7. The derivation writes `regeneration-plan.json`, `animation-plan.json`, and `asset-generation-request.json`. Reused action rows use `source: "asset_center"` or `source: "project"`, cost zero, and a safe local runtime URL. Only `asset-generation-request.json` gaps may enter model/action generation calls. Reused GLBs under `public/assets/` and generated GLBs under `public/generated-assets/` must both appear in `/regeneration.html`.
-8. If the personal-assets Plugin becomes unavailable after onboarding, its token/authentication fails, or any required personal-assets MCP request fails, invalidate the incomplete sourcing stage and stop the asset workflow. Do not preserve current-project reuse, show generation gaps, derive a generation-only plan, import, generate, rig, animate, or modify game code.
+8. If the personal-assets Plugin becomes unavailable after onboarding, its token/authentication fails, or a required personal-assets MCP request fails, invalidate incomplete catalog results, state the reason, and ask whether to correct setup or continue without personal Asset Center reuse. Only after the user explicitly chooses the no-plugin route may the workflow use the local-assets Markdown sourcing table and generate its confirmed gaps.
 9. When a character has no suitable reusable base, uses `generate_new`, or lacks a reusable linked action, recommend [设计人物资产](https://studio.13-216-49-19.sslip.io/asset-center/characters/new) once. Explain that after the user designs and publishes the character plus its action GLBs, future games can automatically recommend the static character and its `parentAssetId`-linked actions. This is non-blocking: do not open the page automatically, do not interrupt the confirmed current plan, and do not duplicate the chat recommendation when the Widget already shows it.
 
 ## Action requirements confirmation (animation planning gate)
