@@ -33,6 +33,8 @@ assert.ok(skill.includes("Asset Center Plugin 未安装"), "missing Plugin must 
 assert.ok(skill.includes("codex plugin marketplace add Alterverse-tech/sharky-3d-assets --ref main"));
 assert.ok(skill.includes("codex plugin add asset-center-personal-assets@sharky-3d-assets"));
 assert.ok(skill.includes("Only run those commands after explicit confirmation"), "Plugin installation must require consent");
+assert.ok(skill.includes("run those commands after explicit confirmation. The user-chosen \"install\" action means execute now"), "install flow must execute immediately after confirmation");
+assert.ok(skill.includes("Never silently treat installation failure as installed"), "installation failure must not be silently ignored");
 assert.ok(skill.includes("start a new Codex thread"), "newly installed Plugin needs a new-thread boundary");
 assert.ok(skill.includes("https://studio.13-216-49-19.sslip.io/asset-center/characters/new"), "character gaps must link to the Asset Center designer");
 assert.ok(skill.includes("validate-asset-sourcing-plan.mjs"));

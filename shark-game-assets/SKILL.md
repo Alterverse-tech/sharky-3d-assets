@@ -117,14 +117,32 @@ When `list_asset_catalog`, `propose_asset_manifest`, and the other personal-asse
 
 > 检测到 Asset Center Plugin 未安装。安装后可先预览并复用你的静态人物 GLB 和所属动作 GLB，再只生成剩余缺口。是否现在安装？（推荐）
 
-Only run those commands after explicit confirmation. Check `codex plugin list --json`, then run only the missing fixed commands:
+Only run those commands after explicit confirmation. The user-chosen "install" action means execute now in the same turn; do not wait for another confirmation.
+
+When the user confirms, follow this sequence in order:
+
+1. Run `codex plugin list --json` once for a live baseline.
+2. Run only the missing fixed commands:
 
 ```bash
 codex plugin marketplace add Alterverse-tech/sharky-3d-assets --ref main
 codex plugin add asset-center-personal-assets@sharky-3d-assets
 ```
 
-After a successful install, tell the user to set `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex without pasting it into chat, then start a new Codex thread so the new Plugin skills and MCP tools are discovered. Do not claim the Plugin is usable in the current thread. If the user declines installation, has already declined it in this task, or installation fails, preserve current-project reuse, show generation gaps, and ask once whether to continue. Never install silently and never turn an installed Plugin's auth/API failure into an install prompt.
+3. Immediately re-check `codex plugin list --json` and verify:
+   - plugin `asset-center-personal-assets` exists
+   - plugin source is `sharky-3d-assets`
+   - marketplace `sharky-3d-assets` is present
+
+If any verification item fails, treat installation as failed. Report failure and do not continue the current asset sourcing flow as if installation succeeded. Offer one explicit branch choice:
+
+- 继续（不安装）：保留当前项目复用+缺口生成继续执行
+- 重试安装：重走本次安装指令
+
+Never silently treat installation failure as installed, and never continue without asking.
+
+After a successful install, tell the user to set `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex without pasting it into chat, then start a new Codex thread so the new Plugin skills and MCP tools are discovered. Do not claim the Plugin is usable in the current thread.
+If the user declines installation, preserve current-project reuse, show generation gaps, and ask once whether to continue in no-install mode. Never install silently and never turn an installed Plugin's auth/API failure into an install prompt.
 
 The required order is:
 
