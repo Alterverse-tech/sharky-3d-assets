@@ -4,6 +4,10 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  buildSourcingProposal,
+  normalizeConfirmedSourcingPlan,
+} from "../plugins/asset-center-personal-assets/scripts/sourcing-contract.mjs";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skill = path.join(repo, "shark-game-assets");
@@ -33,6 +37,36 @@ function validate(plan, requireResolved = false) {
 
 assert.equal(validate(sample, true).status, 0, "canonical resolved sample must validate");
 assert.equal(validate({ ...sample, confirmation: { ...sample.confirmation, confirmed: false } }).status, 1, "unconfirmed plan must fail");
+
+{
+  const result = validate(sample);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.currentTaskAuthorization, "not_evaluated", "disk validation must never claim current-task authorization");
+}
+
+{
+  const proposal = buildSourcingProposal({
+    runId: "runner-game-01",
+    gameSummary: "Two-player airplane obstacle race",
+    requirements: [{
+      slotId: "runner",
+      need: "Shared runner",
+      role: "player",
+      assetKind: "character",
+      model: { defaultSource: "generate_new", confidence: "missing" },
+      actions: [{ name: "jump", scene: "Jump over an airplane", defaultSource: "runtime_procedural" }],
+    }],
+  }, { categories: [] });
+  assert.deepEqual(proposal.intentSnapshot, {
+    gameSummary: "Two-player airplane obstacle race",
+    slots: [{ id: "runner", role: "player", assetKind: "character", actions: ["jump"] }],
+  });
+
+  const plan = normalizeConfirmedSourcingPlan(proposal, {
+    slots: { runner: { model: { source: "generate_new" }, actions: { jump: { source: "runtime_procedural" } } } },
+  }, "2026-08-07T00:00:00.000Z");
+  assert.deepEqual(plan.intentSnapshot, proposal.intentSnapshot, "frozen plan must preserve the proposal intent snapshot");
+}
 
 {
   const plan = structuredClone(sample);

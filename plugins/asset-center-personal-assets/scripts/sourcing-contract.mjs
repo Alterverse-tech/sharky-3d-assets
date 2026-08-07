@@ -95,6 +95,7 @@ export function buildSourcingProposal(args, catalog) {
     schema: "shark-asset-sourcing-proposal",
     runId,
     ...(textOrUndefined(args.gameSummary) ? { gameSummary: args.gameSummary.trim() } : {}),
+    intentSnapshot: buildIntentSnapshot(args.gameSummary, slots),
     slots,
   };
   return { ...proposal, totals: totalsForDefaults(proposal) };
@@ -135,6 +136,7 @@ export function normalizeConfirmedSourcingPlan(proposal, uiState, confirmedAt = 
     version: 1,
     schema: "shark-asset-sourcing-plan",
     runId: requireText(proposal.runId, "proposal.runId"),
+    intentSnapshot: buildIntentSnapshot(proposal.gameSummary, proposal.slots),
     confirmation: {
       confirmed: true,
       confirmedBy: "user",
@@ -143,6 +145,18 @@ export function normalizeConfirmedSourcingPlan(proposal, uiState, confirmedAt = 
     slots,
   };
   return { ...plan, totals: totalsForPlan(plan) };
+}
+
+function buildIntentSnapshot(gameSummary, slots) {
+  return {
+    gameSummary: textOrUndefined(gameSummary) ?? "",
+    slots: slots.map((slot) => ({
+      id: slot.id,
+      role: slot.role,
+      assetKind: slot.assetKind,
+      actions: slot.actions.map((action) => action.name),
+    })),
+  };
 }
 
 function buildLegacyManifest(args, entries) {

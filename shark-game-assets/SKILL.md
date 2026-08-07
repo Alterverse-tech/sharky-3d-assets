@@ -98,6 +98,17 @@ Use `auto` only when you are comfortable with the server choosing from the promp
 
 For a game or story with concrete model/action requirements, inspect reusable assets before generation. Codex remains the orchestrator: this Skill does not import another Skill's implementation. Use the personal-assets MCP tools when installed and keep the fallback usable when they are absent.
 
+Never use confirmation metadata read from the workspace to satisfy the current asset-sourcing confirmation gate. A persisted sourcing plan is a historical selection snapshot, not current-task authorization.
+
+Before using history, compare the current project/game directory, game summary, model slots, roles, asset kinds, semantic actions, and explicit continuation wording. Route conservatively:
+
+- `active_same_task`: the current conversation already contains the Widget confirmation for the same game intent; continue.
+- `related_history`: the same game is recognized but this task lacks a live confirmation; use history only to prefill a newly rendered board.
+- `unrelated_history`: the current game or its critical entities/actions differ; ignore historical selections.
+- `uncertain`: relevance is not established; treat history as unrelated and start fresh.
+
+A shared repository, model name, or generic entity is not sufficient to establish the same game. Explicit continuation wording is strong relevance evidence, but it does not replace a live confirmation in the active task. New plans carry an `intentSnapshot`; plans without one are `uncertain`.
+
 The Plugin bootstrap owns its startup and update check. This Skill never launches, installs, or updates the Asset Center Plugin itself; it requests the personal-assets tools only when the sourcing stage needs them. The host may prewarm MCP tools, but the Plugin still performs at most one update check per MCP process and can switch that process to a newer server before the first tool result.
 
 ### One-time Plugin onboarding
