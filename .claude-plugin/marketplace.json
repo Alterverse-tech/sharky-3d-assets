@@ -8,7 +8,7 @@
       "name": "asset-center-personal-assets",
       "source": "./plugins/asset-center-personal-assets",
       "description": "Match, preview, and safely import your personal Asset Center models into game projects — including story-driven semantic recall of the whole personal library.",
-      "version": "0.4.7",
+      "version": "0.4.8",
       "author": {
         "name": "Shark Studio"
       },

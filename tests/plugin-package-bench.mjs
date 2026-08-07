@@ -16,7 +16,7 @@ const server = readFileSync(path.join(pluginRoot, "scripts", "asset-center-perso
 assert.equal(marketplace.name, "sharky-3d-assets");
 assert.equal(marketplace.plugins[0].source.path, "./plugins/asset-center-personal-assets");
 assert.equal(manifest.name, "asset-center-personal-assets");
-assert.equal(manifest.version, "0.4.7");
+assert.equal(manifest.version, "0.4.8");
 assert.deepEqual(mcp.mcpServers.asset_center_personal_assets.args, ["./scripts/plugin-bootstrap.mjs"]);
 assert.equal(claudeMarketplace.name, "sharky-3d-assets");
 assert.equal(claudeMarketplace.plugins[0].name, "asset-center-personal-assets");
@@ -30,7 +30,7 @@ assert.equal(claudeMarketplace.plugins[1].name, "shark-game-assets");
 assert.equal(claudeMarketplace.plugins[1].source, "./shark-game-assets");
 assert.equal(claudeSkillManifest.name, "shark-game-assets");
 assert.match(bootstrap, /resolveMcpServer/);
-assert.match(server, /SERVER_VERSION = "0\.4\.7"/);
+assert.match(server, /SERVER_VERSION = "0\.4\.8"/);
 const widget = readFileSync(path.join(pluginRoot, "web", "src", "AssetSourcingBoard.tsx"), "utf8");
 const bridge = readFileSync(path.join(pluginRoot, "web", "src", "bridge.ts"), "utf8");
 const bundle = readFileSync(path.join(pluginRoot, "web", "dist", "asset-sourcing-board.js"), "utf8");
