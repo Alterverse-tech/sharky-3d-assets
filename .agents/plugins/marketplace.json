@@ -1,0 +1,20 @@
+{
+  "name": "sharky-3d-assets",
+  "interface": {
+    "displayName": "Sharky 3D Assets"
+  },
+  "plugins": [
+    {
+      "name": "asset-center-personal-assets",
+      "source": {
+        "source": "local",
+        "path": "./plugins/asset-center-personal-assets"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

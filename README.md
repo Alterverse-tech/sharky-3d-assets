@@ -35,6 +35,8 @@ Ready-to-use GLB files are added to your project
 
 **Reuse before generate.** When the Asset Center personal-assets Plugin is installed, the agent first inspects current-project imports, reads the personal catalog once, and opens a native-feeling fullscreen MCP App sourcing board. Every base model and nested action can be previewed and changed. One final confirmation freezes the plan; only selected Asset Center files are imported and only remaining gaps are sent to generation. Reused and generated GLBs then share the same `/regeneration.html` progress view.
 
+**Session-current Plugin updates.** The Asset Center Plugin checks this Git marketplace once whenever its MCP process starts. If a newer Plugin version exists, that same Codex session launches the newer MCP server; network or update failures fall back to the installed copy.
+
 **Action requirements confirmation gate.** Before generating any character or creature, the agent reads your game description or script, extracts the actions each entity actually needs, and presents an action requirements table — character/entity, action, triggering scene, suggested source, Tripo preset, and cost. Nothing is generated and no credits are spent until you explicitly confirm; add, remove, or swap rows and the table re-renders. The confirmed list is frozen as the run's action plan.
 
 <img src="docs/img/confirmation-gate.svg" alt="Game script → action requirements table → explicit confirmation → generate" width="100%" />
@@ -56,12 +58,21 @@ Ready-to-use GLB files are added to your project
 Install the skill globally using the [Skills CLI](https://skills.sh):
 
 ```
-npx skills add https://github.com/Alterverse-tech/shark_game_assets \
+npx skills add https://github.com/Alterverse-tech/sharky-3d-assets \
   --skill shark-game-assets \
   -g
 ```
 
 After installation, the skill becomes available to compatible coding agents on your machine.
+
+To add the Asset Center Plugin to Codex:
+
+```bash
+codex plugin marketplace add Alterverse-tech/sharky-3d-assets --ref main
+codex plugin add asset-center-personal-assets@sharky-3d-assets
+```
+
+Set `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex. The Plugin is independent, but when `shark-game-assets` reaches its reuse-before-generation sourcing stage, the personal-assets tools and native selection board become the default reuse path.
 
 ## Public Access
 

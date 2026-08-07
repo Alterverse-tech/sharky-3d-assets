@@ -1,0 +1,24 @@
+{
+  "name": "asset-center-personal-assets",
+  "version": "0.4.1",
+  "description": "Match, preview, and safely import a user's personal Asset Center models into Codex game projects — including story-driven semantic recall of the whole personal library.",
+  "author": {
+    "name": "Shark Studio"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Asset Center Personal Assets",
+    "shortDescription": "Bring your personal GLB models into Codex games.",
+    "longDescription": "Search and preview the GLB models published under your Asset Center account, choose the right model, and import a verified local copy into the current game workspace.",
+    "developerName": "Shark Studio",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Semantic recall of the personal asset library from a game story",
+      "Search personal Asset Center GLBs",
+      "Preview model metadata and animations",
+      "Import verified local GLB packages"
+    ],
+    "defaultPrompt": "Show me my Asset Center models and help me import one into this game."
+  },
+  "mcpServers": "./.mcp.json"
+}

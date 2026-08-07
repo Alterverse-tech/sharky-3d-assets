@@ -98,6 +98,8 @@ Use `auto` only when you are comfortable with the server choosing from the promp
 
 For a game or story with concrete model/action requirements, inspect reusable assets before generation. Codex remains the orchestrator: this Skill does not import another Skill's implementation. Use the personal-assets MCP tools when installed and keep the fallback usable when they are absent.
 
+The Plugin bootstrap owns its startup and update check. This Skill never launches, installs, or updates the Asset Center Plugin itself; it requests the personal-assets tools only when the sourcing stage needs them. The host may prewarm MCP tools, but the Plugin still performs at most one update check per MCP process and can switch that process to a newer server before the first tool result.
+
 The required order is:
 
 ```text
