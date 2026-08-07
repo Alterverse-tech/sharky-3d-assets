@@ -96,7 +96,7 @@ Use `auto` only when you are comfortable with the server choosing from the promp
 
 ## Asset sourcing confirmation gate (reuse before generation)
 
-For a game or story with concrete model/action requirements, inspect reusable assets before generation. Codex remains the orchestrator: this Skill does not import another Skill's implementation. Use the personal-assets MCP tools when installed and keep the fallback usable when they are absent.
+For a game or story with concrete model/action requirements, inspect reusable assets before generation. Codex remains the orchestrator: this Skill does not import another Skill's implementation. The Asset Center personal-assets Plugin is a blocking prerequisite for this sourcing gate: when its MCP tools are absent or unusable, pause the asset workflow and resolve installation/configuration with the user. Do not replace it with current-project reuse, a generation-only plan, or another source.
 
 Never use confirmation metadata read from the workspace to satisfy the current asset-sourcing confirmation gate. A persisted sourcing plan is a historical selection snapshot, not current-task authorization.
 
@@ -109,17 +109,17 @@ Before using history, compare the current project/game directory, game summary, 
 
 A shared repository, model name, or generic entity is not sufficient to establish the same game. Explicit continuation wording is strong relevance evidence, but it does not replace a live confirmation in the active task. New plans carry an `intentSnapshot`; plans without one are `uncertain`.
 
-The Plugin bootstrap owns its startup and update check. This Skill never launches, installs, or updates the Asset Center Plugin itself; it requests the personal-assets tools only when the sourcing stage needs them. The host may prewarm MCP tools, but the Plugin still performs at most one update check per MCP process and can switch that process to a newer server before the first tool result.
+The Plugin bootstrap owns its startup and update check. This Skill never installs or updates the Asset Center Plugin silently. After the user explicitly chooses installation, it may run only the fixed commands for the active host. The host may prewarm MCP tools, but the Plugin still performs at most one update check per MCP process and can switch that process to a newer server before the first tool result.
 
 ### One-time Plugin onboarding
 
-When `list_asset_catalog`, `propose_asset_manifest`, and the other personal-assets tools are all absent, distinguish that from an installed Plugin whose API/auth call failed. For the absent-tools case, ask once per game asset task:
+When `list_asset_catalog`, `propose_asset_manifest`, and the other personal-assets tools are all absent, distinguish that from an installed Plugin whose API/auth call failed. For the absent-tools case, immediately stop the asset workflow and ask once per game asset task:
 
-> 检测到 Asset Center Plugin 未安装。安装后可先预览并复用你的静态人物 GLB 和所属动作 GLB，再只生成剩余缺口。是否现在安装？（推荐）
+> 检测到 Asset Center Plugin 未安装。本次资产流程已暂停，不会自动降级为本地复用或直接生成。请选择：安装插件 / 不安装。
 
-Only run those commands after explicit confirmation. The user-chosen "install" action means execute now in the same turn; do not wait for another confirmation.
+Do not inspect the catalog, create a sourcing proposal, import, generate, rig, animate, or modify game code while this choice is unresolved. Only run installation commands after explicit confirmation. The user-chosen "install" action authorizes those commands now, but never authorizes continuing the asset workflow.
 
-When the user confirms, follow this sequence in order:
+For Codex, follow this sequence in order:
 
 1. Run `codex plugin list --json` once for a live baseline.
 2. Run only the missing fixed commands:
@@ -134,20 +134,33 @@ codex plugin add asset-center-personal-assets@sharky-3d-assets
    - plugin source is `sharky-3d-assets`
    - marketplace `sharky-3d-assets` is present
 
-If any verification item fails, treat installation as failed. Report failure and do not continue the current asset sourcing flow as if installation succeeded. Offer one explicit branch choice:
+For Claude Code, use:
 
-- 继续（不安装）：保留当前项目复用+缺口生成继续执行
-- 重试安装：重走本次安装指令
+```bash
+claude plugin marketplace add Alterverse-tech/sharky-3d-assets
+claude plugin install asset-center-personal-assets@sharky-3d-assets
+```
 
-Never silently treat installation failure as installed, and never continue without asking.
+If installation or its verification fails, report the failure and stop the current asset workflow. Do not offer a no-install continuation, generation-gap plan, current-project reuse, or automatic retry. Never silently treat installation failure as installed.
 
-After a successful install, tell the user to set `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex without pasting it into chat, then start a new Codex thread so the new Plugin skills and MCP tools are discovered. Do not claim the Plugin is usable in the current thread.
-If the user declines installation, preserve current-project reuse, show generation gaps, and ask once whether to continue in no-install mode. Never install silently and never turn an installed Plugin's auth/API failure into an install prompt.
+After a successful install, tell the user to configure `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex or Claude Code without pasting it into chat. On macOS desktop hosts, a safe terminal pattern is:
+
+```bash
+read -s ASSET_CENTER_SERVICE_TOKEN
+launchctl setenv ASSET_CENTER_SERVICE_TOKEN "$ASSET_CENTER_SERVICE_TOKEN"
+unset ASSET_CENTER_SERVICE_TOKEN
+```
+
+Then fully restart the host and start a new Codex thread or fresh Claude Code session so the Plugin skills and MCP tools are discovered. Do not claim the Plugin is usable in the current session. Successful installation is a terminal state for the current asset workflow: stop rather than continuing with a fallback. If the user chooses not to install, has already declined it in this task, or installation fails, stop the asset workflow. Do not preserve current-project reuse, show generation gaps, ask whether to continue, or otherwise bypass the sourcing gate. Never turn an installed Plugin's auth/API failure into an install prompt.
+
+If the Plugin is installed but `ASSET_CENTER_SERVICE_TOKEN` is missing, unavailable to the host process, invalid, or rejected, report the specific configuration/authentication state and stop the asset workflow. Do not ask the user to paste a token, do not use any fallback, and do not continue after showing setup instructions. The same stop rule applies when a personal-assets MCP request fails or the Asset Center catalog is unavailable; a failed query is never an empty catalog.
 
 The required order is:
 
 ```text
-extract model/action requirements
+Plugin installed and discovered in a fresh session
+→ ASSET_CENTER_SERVICE_TOKEN available to that host process
+→ extract model/action requirements
 → inspect current project imports
 → list Asset Center catalog once
 → build sourcing proposal
@@ -160,8 +173,8 @@ extract model/action requirements
 ```
 
 1. Extract the key model slots and every semantic action with its triggering scene. Inspect `asset_manifest.json`, `asset-center.lock.json`, and loadable local GLBs before querying remote inventory.
-2. If `list_asset_catalog` is available, call it once for the sourcing pass. Match the complete returned catalog; do not issue one search per slot. If the tool is absent or the call fails, report `库存查询失败/暂不可用`. A failed query is not an empty library and must never be described as “没有资产”.
-3. Call `propose_asset_manifest` with the model/action requirements and model-selected recommendation evidence. Include a concise noun-phrase `entityLabel` for every requirement; do not copy the full requirement description or append internal tier values such as `(key)`. Include the model entry scene plus exact presentation wording for each asset requirement when needed. Pass the returned `shark-asset-sourcing-proposal` to `render_asset_sourcing_board`. The MCP App's primary interaction is the complete confirmation table with exactly these columns in this order: 角色/实体、资产需求、选项、当前选择、候选方案（点击预览）、模型来源、动作、触发场景、动作来源、复用状态. Character and creature model groups use 人物/主体; non-living groups use 道具 and 道具动作. Candidate names use real HTTP/HTTPS preview URLs; clicking one lets the user choose 在 Codex 中打开 or 在系统浏览器打开. Absent candidates have no placeholder row. Every 资产需求 is single-choice, changing the base resets incompatible actions, linked actions require the matching Asset Center base, and the footer contains only the final confirmation button with no cost or summary statistics. 刷新资产 asks Codex to reload the full catalog and rebuild the proposal without importing or generating. The markdown table is the fallback in hosts without MCP Apps.
+2. Call `list_asset_catalog` once for the sourcing pass. Match the complete returned catalog; do not issue one search per slot. If the tool is absent, the token is missing/invalid, or the call fails, report the specific reason and stop the asset workflow. Do not produce a local-reuse, generation-only, or project-import fallback. A failed query is not an empty library and must never be described as “没有资产”.
+3. Call `propose_asset_manifest` with the model/action requirements and model-selected recommendation evidence. Include a concise noun-phrase `entityLabel` for every requirement; do not copy the full requirement description or append internal tier values such as `(key)`. Include the model entry scene plus exact presentation wording for each asset requirement when needed. Pass the returned `shark-asset-sourcing-proposal` to `render_asset_sourcing_board`. The MCP App's primary interaction is the complete confirmation table with exactly these columns in this order: 角色/实体、资产需求、选项、当前选择、候选方案（点击预览）、模型来源、动作、触发场景、动作来源、复用状态. Character and creature model groups use 人物/主体; non-living groups use 道具 and 道具动作. Candidate names use real HTTP/HTTPS preview URLs; clicking one lets the user choose 在 Codex 中打开 or 在系统浏览器打开. Absent candidates have no placeholder row. Every 资产需求 is single-choice, changing the base resets incompatible actions, linked actions require the matching Asset Center base, and the footer contains only the final confirmation button with no cost or summary statistics. 刷新资产 asks Codex to reload the full catalog and rebuild the proposal without importing or generating. The markdown table is a presentation fallback only when the personal-assets MCP catalog and proposal calls succeeded but the host cannot render the MCP App; it is never a fallback for a missing or failed Plugin.
 4. The user may change every base model and nested action. A base change invalidates linked actions from the previous parent. `reuse_compatible_action` is selectable only with verified compatibility. Wait for the single `确认资产方案并开始制作` action; do not import, generate, rig, animate, or modify game code before it.
 5. Save the confirmed result as `asset-sourcing-plan.json`, then validate it:
 
@@ -177,7 +190,7 @@ node <skill-dir>/scripts/derive-asset-plans.mjs --cwd "$(pwd)"
 ```
 
 7. The derivation writes `regeneration-plan.json`, `animation-plan.json`, and `asset-generation-request.json`. Reused action rows use `source: "asset_center"` or `source: "project"`, cost zero, and a safe local runtime URL. Only `asset-generation-request.json` gaps may enter model/action generation calls. Reused GLBs under `public/assets/` and generated GLBs under `public/generated-assets/` must both appear in `/regeneration.html`.
-8. If the personal-assets Plugin is unavailable after the onboarding choice, preserve current-project reuse, show the proposed generation gaps in chat, and ask once whether to continue. Do not silently bypass the gate.
+8. If the personal-assets Plugin becomes unavailable after onboarding, its token/authentication fails, or any required personal-assets MCP request fails, invalidate the incomplete sourcing stage and stop the asset workflow. Do not preserve current-project reuse, show generation gaps, derive a generation-only plan, import, generate, rig, animate, or modify game code.
 9. When a character has no suitable reusable base, uses `generate_new`, or lacks a reusable linked action, recommend [设计人物资产](https://studio.13-216-49-19.sslip.io/asset-center/characters/new) once. Explain that after the user designs and publishes the character plus its action GLBs, future games can automatically recommend the static character and its `parentAssetId`-linked actions. This is non-blocking: do not open the page automatically, do not interrupt the confirmed current plan, and do not duplicate the chat recommendation when the Widget already shows it.
 
 ## Action requirements confirmation (animation planning gate)
@@ -272,7 +285,7 @@ Natural-language trigger examples that do not explicitly name the skill:
 For asset generation or integration tasks, prefer MCP tools named `mcp__game_assets__*` when available. Otherwise run the bundled client via Bash. Both expose the same readiness, generate, and animate operations. Skip this workflow for a publish-only request.
 
 1. Run `pwd` if you do not already know the current workspace path.
-2. Complete the asset sourcing confirmation gate. Inspect project imports, read the Asset Center catalog once when available, render the progressive board, wait for its one final confirmation, pull only selected reuse items, resolve local paths, and run `derive-asset-plans.mjs`. Do not make a generation call or change integration code before this step.
+2. Complete the asset sourcing confirmation gate. The Asset Center personal-assets Plugin and a usable `ASSET_CENTER_SERVICE_TOKEN` are mandatory: if either is unavailable, stop at onboarding/configuration and do not create a local-reuse or generation-only fallback. Otherwise inspect project imports, read the Asset Center catalog once, render the progressive board, wait for its one final confirmation, pull only selected reuse items, resolve local paths, and run `derive-asset-plans.mjs`. Do not make a generation call or change integration code before this step.
 3. Use the derived `regeneration-plan.json` to create/restore the preview, reset derived status for that plan, and start the synchronizer before making any asset generation API call or changing integration code:
 
 ```bash
@@ -287,7 +300,7 @@ node <skill-dir>/scripts/sync-regeneration-status.mjs \
 ```
 
    Start or reuse a local server and verify it serves `/regeneration.html` before the first generate/animate call — deploying the page is part of asset work, not optional polish. Only when the environment cannot open a local listener, say so explicitly and continue with the file-level preview. For an integration-only task with existing local GLBs, populate the plan from `asset_manifest.json`, run the same setup/synchronizer, and make existing base/action GLBs previewable before changing integration code. These preview actions are local-only.
-4. Run `validate-animation-plan.mjs` on the derived plan. If the sourcing board was unavailable and the task will generate or wire character/creature actions, use the standalone action requirements table fallback first. Do not ask twice when the sourcing board already captured the same choices.
+4. Run `validate-animation-plan.mjs` on the derived plan. If the host cannot render the MCP App but the personal-assets catalog and proposal tools succeeded, use the equivalent Markdown sourcing board, then use its confirmation for the action requirements. If the personal-assets Plugin, token, or required MCP call is unavailable, stop instead. Do not ask twice when the sourcing board already captured the same choices.
 5. Call the configured public asset API without requesting or sending a login or client token. Platform or sandbox restrictions still apply.
 6. If planning 3 or more generated assets, or if this is the first asset generation in the thread, check readiness (`<skill-dir>` is this skill's directory):
 
@@ -625,6 +638,7 @@ Use the bundled subskill [tripo-rig-clip](subskills/tripo-rig-clip.md) when the 
 
 ## Failure handling
 
+- Asset Center personal-assets Plugin missing, its `ASSET_CENTER_SERVICE_TOKEN` missing/invalid, or a required personal-assets MCP request unavailable: state the exact condition and stop the asset workflow. Give the host-specific installation/configuration tutorial when applicable, but do not continue in this session and do not downgrade to current-project reuse, direct generation, or a generation-gap plan.
 - Remote call blocked by policy or asset API unreachable: report that the asset service is temporarily unavailable. Do not ask for credentials and never silently substitute placeholders for requested GLB generation.
 - Gemini reference generation unavailable: the client retries the same assets once through `tripo`, then reports a concise failure if that also fails. GLBs delivered through this tripo fallback are static like any tripo-route GLB (see Route choice for the task-id mechanism): character/creature assets arrive without a skeleton or retarget clips, and runtime animation falls back to procedural/group animation.
 - Zero Tripo balance: do not retry in a loop. Keep fallbacks and record the skipped stage in the README.
