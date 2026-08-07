@@ -91,6 +91,13 @@ npx skills add https://github.com/Alterverse-tech/sharky-3d-assets \
 
 After installation, the skill becomes available to compatible coding agents on your machine.
 
+Claude Code can install the skill from the plugin marketplace instead of the Skills CLI (pick one mechanism, not both):
+
+```bash
+claude plugin marketplace add Alterverse-tech/sharky-3d-assets
+claude plugin install shark-game-assets@sharky-3d-assets
+```
+
 To add the Asset Center Plugin to Codex:
 
 ```bash
