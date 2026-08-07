@@ -9,7 +9,7 @@ import { sourcingBoardHtml } from "./sourcing-board-resource.mjs";
 import { buildSourcingProposal, normalizeConfirmedSourcingPlan } from "./sourcing-contract.mjs";
 
 const SERVER_NAME = "asset-center-personal-assets";
-const SERVER_VERSION = "0.4.4";
+const SERVER_VERSION = "0.4.5";
 const PROTOCOL_VERSION = "2024-11-05";
 const DEFAULT_API_BASE_URL = "https://studio.13-216-49-19.sslip.io/codex/v1";
 const DEFAULT_TARGET_DIRECTORY = "public/assets/asset-center";
@@ -17,7 +17,7 @@ const LOCK_SCHEMA = "shark.asset-center-lock/v1";
 const ASSET_SCHEMA = "shark.asset-center-import/v1";
 const MAX_GLB_BYTES = 512 * 1024 * 1024;
 
-const SOURCING_BOARD_URI = "ui://asset-center-personal-assets/sourcing-board-v2.html";
+const SOURCING_BOARD_URI = "ui://asset-center-personal-assets/sourcing-board-v3.html";
 
 const tools = [
   {
@@ -43,8 +43,55 @@ const tools = [
               recommendedAssetId: { type: "string" },
               alternativeAssetIds: { type: "array", items: { type: "string" }, maxItems: 5 },
               reason: { type: "string", maxLength: 200 },
-              model: { type: "object" },
-              actions: { type: "array", items: { type: "object" }, maxItems: 20 }
+              model: {
+                type: "object",
+                properties: {
+                  defaultSource: { type: "string", enum: ["reuse_project", "reuse_asset_center", "generate_new", "primitive_fallback"] },
+                  confidence: { type: "string", enum: ["high", "medium", "low", "missing"] },
+                  recommendedAssetId: { type: "string" },
+                  alternativeAssetIds: { type: "array", items: { type: "string" }, maxItems: 5 },
+                  projectCandidates: { type: "array", items: { type: "object" }, maxItems: 5 },
+                  reason: { type: "string", maxLength: 200 },
+                  generator: { type: "string", maxLength: 160, description: "Generation route label, for example Gemini Reference → Tripo." },
+                  scene: { type: "string", maxLength: 200, description: "The model row's 触发场景." },
+                  generatedLabel: { type: "string", maxLength: 200 },
+                  generatedSource: { type: "string", maxLength: 200 },
+                  generatedReuseStatus: { type: "string", maxLength: 200 },
+                  fallbackLabel: { type: "string", maxLength: 200 },
+                  fallbackReuseStatus: { type: "string", maxLength: 200 }
+                },
+                required: ["defaultSource", "confidence"],
+                additionalProperties: false
+              },
+              actions: {
+                type: "array",
+                maxItems: 20,
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string", minLength: 1, maxLength: 120 },
+                    requirement: { type: "string", maxLength: 120, description: "The 资产需求 label, for example 移动动作 or 待机动作." },
+                    scene: { type: "string", minLength: 1, maxLength: 200 },
+                    defaultSource: { type: "string", enum: ["reuse_linked_action", "reuse_compatible_action", "generate_action", "runtime_procedural", "primitive_fallback"] },
+                    recommendedAssetId: { type: "string" },
+                    alternativeAssetIds: { type: "array", items: { type: "string" }, maxItems: 5 },
+                    generator: { type: "string", maxLength: 160 },
+                    preset: { type: "string", maxLength: 160 },
+                    cost: { type: "integer", minimum: 0 },
+                    generationRoute: { type: "object" },
+                    generatedLabel: { type: "string", maxLength: 200 },
+                    generatedModelSource: { type: "string", maxLength: 200 },
+                    generatedReuseStatus: { type: "string", maxLength: 200 },
+                    runtimeLabel: { type: "string", maxLength: 200 },
+                    runtimeModelSource: { type: "string", maxLength: 200 },
+                    runtimeSource: { type: "string", maxLength: 200 },
+                    runtimeReuseStatus: { type: "string", maxLength: 200 },
+                    linkedModelSource: { type: "string", maxLength: 200 }
+                  },
+                  required: ["name", "scene", "defaultSource"],
+                  additionalProperties: false
+                }
+              }
             },
             required: ["need"],
             additionalProperties: false
@@ -61,7 +108,7 @@ const tools = [
   },
   {
     name: "render_asset_sourcing_board",
-    description: "Render one prepared shark-asset-sourcing-proposal as a compact business selection table. The table groups model and action choices under 角色/实体、模型来源、动作、触发场景、动作来源, and clickable Asset Center names open their HTTP preview pages. Always call propose_asset_manifest first and pass its complete proposal. This tool does not query the catalog again.",
+    description: "Render one prepared shark-asset-sourcing-proposal as 完整资产确认表 with exactly these columns in this order: 角色/实体、资产需求、选项、候选方案（点击预览）、模型来源、动作、触发场景、动作来源、复用状态、当前选择. Every 资产需求 is a single-choice group. Real Asset Center candidates use their HTTP/HTTPS previewUrl; missing candidates produce no placeholder row. The footer contains only 确认资产方案并开始制作 and no cost or summary statistics. Always call propose_asset_manifest first and pass its complete proposal. This tool does not query the catalog again.",
     inputSchema: {
       type: "object",
       properties: { proposal: { type: "object" } },

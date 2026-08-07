@@ -1,7 +1,7 @@
 import "./styles.css";
 
 import { createRoot } from "react-dom/client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   callTool,
@@ -12,15 +12,9 @@ import {
   subscribeToolOutput,
 } from "./bridge";
 
-const CHARACTER_DESIGNER_URL = "https://studio.13-216-49-19.sslip.io/asset-center/characters/new";
-
 type Asset = {
   id: string;
   displayName: string;
-  classification?: string;
-  description?: string;
-  animations?: string[];
-  sizeBytes?: number;
   parentAssetId?: string;
   previewUrl?: string;
   compatibility?: { status?: string };
@@ -31,12 +25,16 @@ type ChoiceState = { slots: Record<string, { model: any; actions: Record<string,
 type ChoiceRow = {
   key: string;
   value: string;
-  label: string;
-  source: string;
-  detail?: string;
+  candidate: string;
+  modelSource: string;
+  action: string;
+  scene: string;
+  actionSource: string;
+  reuseStatus: string;
   previewUrl?: string;
   recommended?: boolean;
   disabled?: boolean;
+  conditional?: boolean;
 };
 
 function modelAssets(slot: any): Asset[] {
@@ -44,12 +42,48 @@ function modelAssets(slot: any): Asset[] {
 }
 
 function modelValue(choice: any) {
-  return choice.assetId ? `${choice.source}:${choice.assetId}` : choice.source;
+  return choice?.assetId ? `${choice.source}:${choice.assetId}` : choice?.source;
 }
 
 function parseChoiceValue(value: string) {
   const [source, assetId] = value.split(":", 2);
   return assetId ? { source, assetId } : { source };
+}
+
+function safePreviewUrl(value?: string) {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function entityLabel(slot: any) {
+  return slot.tier ? `${slot.name}（${slot.tier}）` : slot.name;
+}
+
+function optionLabel(index: number) {
+  return index < 26 ? String.fromCharCode(65 + index) : String(index + 1);
+}
+
+function FormattedText({ value }: { value: string }) {
+  return <>{value.split(/(`[^`]+`)/g).filter(Boolean).map((part, index) =>
+    part.startsWith("`") && part.endsWith("`")
+      ? <code key={index}>{part.slice(1, -1)}</code>
+      : <span key={index}>{part}</span>,
+  )}</>;
+}
+
+function preferredModel(slot: any) {
+  if (slot.model.confidence === "high" && slot.model.defaultSource === "reuse_project" && slot.model.projectCandidates?.[0]) {
+    return { source: "reuse_project", assetId: slot.model.projectCandidates[0].id };
+  }
+  if (slot.model.confidence === "high" && slot.model.recommended) {
+    return { source: "reuse_asset_center", assetId: slot.model.recommended.id };
+  }
+  return { source: "generate_new" };
 }
 
 function defaultActionChoice(action: any, model: any) {
@@ -59,7 +93,8 @@ function defaultActionChoice(action: any, model: any) {
   }
   if (action.defaultSource === "reuse_compatible_action") {
     const compatible = action.candidates?.find((entry: Asset) => entry.compatibility?.status === "verified");
-    if (compatible) return { source: "reuse_compatible_action", assetId: compatible.id };
+    const reused = model.source === "reuse_asset_center" || model.source === "reuse_project";
+    if (compatible && reused) return { source: "reuse_compatible_action", assetId: compatible.id };
   }
   if (action.defaultSource === "generate_action") {
     const reused = model.source === "reuse_asset_center" || model.source === "reuse_project";
@@ -72,14 +107,7 @@ function defaultActionChoice(action: any, model: any) {
 function defaultState(proposal: Proposal): ChoiceState {
   const slots: ChoiceState["slots"] = {};
   for (const slot of proposal.slots) {
-    let model: any;
-    if (slot.model.defaultSource === "reuse_asset_center" && slot.model.recommended) {
-      model = { source: "reuse_asset_center", assetId: slot.model.recommended.id };
-    } else if (slot.model.defaultSource === "reuse_project" && slot.model.projectCandidates?.[0]) {
-      model = { source: "reuse_project", assetId: slot.model.projectCandidates[0].id };
-    } else {
-      model = { source: slot.model.defaultSource };
-    }
+    const model = preferredModel(slot);
     slots[slot.id] = {
       model,
       actions: Object.fromEntries(slot.actions.map((action: any) => [action.name, defaultActionChoice(action, model)])),
@@ -88,179 +116,208 @@ function defaultState(proposal: Proposal): ChoiceState {
   return { slots };
 }
 
-function totals(proposal: Proposal, choices: ChoiceState) {
-  const result = { imports: 0, generatedModels: 0, generatedActions: 0, runtimeActions: 0, fallbacks: 0, tripoCost: 0 };
-  for (const slot of proposal.slots) {
-    const selected = choices.slots[slot.id];
-    if (!selected) continue;
-    if (selected.model.source === "reuse_asset_center") result.imports += 1;
-    if (selected.model.source === "generate_new") result.generatedModels += 1;
-    if (selected.model.source === "primitive_fallback") result.fallbacks += 1;
-    for (const action of slot.actions) {
-      const choice = selected.actions[action.name];
-      if (!choice) continue;
-      if (choice.source === "reuse_linked_action" || choice.source === "reuse_compatible_action") result.imports += 1;
-      if (choice.source === "generate_action") {
-        result.generatedActions += 1;
-        result.tripoCost += action.cost ?? 0;
-      }
-      if (choice.source === "runtime_procedural") result.runtimeActions += 1;
-      if (choice.source === "primitive_fallback") result.fallbacks += 1;
-    }
-  }
-  return result;
+function modelScene(slot: any) {
+  return slot.model.scene ?? slot.actions?.[0]?.scene ?? "模型首次进入场景时";
 }
 
-function previewUrl(value?: string) {
-  if (!value) return undefined;
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.href : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function assetDetail(asset: Asset) {
-  return [
-    asset.classification,
-    asset.animations?.length ? asset.animations.slice(0, 2).join(" / ") : null,
-    asset.sizeBytes ? `${(asset.sizeBytes / 1_000_000).toFixed(1)} MB` : null,
-  ].filter(Boolean).join(" · ");
+function generatedModelSource(slot: any) {
+  return slot.model.generatedSource ?? `新生成${slot.model.generator ? ` · ${slot.model.generator}` : ""}`;
 }
 
 function modelRows(slot: any): ChoiceRow[] {
-  const rows: ChoiceRow[] = [];
-  for (const entry of slot.model.projectCandidates ?? []) {
-    rows.push({
-      key: `project:${entry.id}`,
-      value: `reuse_project:${entry.id}`,
-      label: entry.displayName,
-      source: "当前项目",
-      detail: assetDetail(entry),
-      previewUrl: previewUrl(entry.previewUrl),
-      recommended: slot.model.defaultSource === "reuse_project" && entry.id === slot.model.projectCandidates[0]?.id,
-    });
-  }
-  for (const entry of modelAssets(slot)) {
-    rows.push({
-      key: `center:${entry.id}`,
-      value: `reuse_asset_center:${entry.id}`,
-      label: entry.displayName,
-      source: "Asset Center",
-      detail: assetDetail(entry),
-      previewUrl: previewUrl(entry.previewUrl),
-      recommended: slot.model.defaultSource === "reuse_asset_center" && entry.id === slot.model.recommended?.id,
-    });
-  }
-  rows.push({
+  const selectedDefault = modelValue(preferredModel(slot));
+  const generated: ChoiceRow = {
     key: "generate_new",
     value: "generate_new",
-    label: `生成原创${slot.name}`,
-    source: "新生成",
-    detail: slot.model.generator ?? "按当前游戏风格生成 GLB",
-    previewUrl: String(slot.assetKind).toLowerCase() === "character" ? CHARACTER_DESIGNER_URL : undefined,
-    recommended: slot.model.defaultSource === "generate_new",
-  });
-  rows.push({
+    candidate: slot.model.generatedLabel ?? `生成原创${slot.name}`,
+    modelSource: generatedModelSource(slot),
+    action: "—",
+    scene: modelScene(slot),
+    actionSource: "—",
+    reuseStatus: slot.model.generatedReuseStatus ?? (slot.tier === "key" ? "原创主模型" : "原创静态模型"),
+  };
+  const project = (slot.model.projectCandidates ?? []).map((entry: Asset) => ({
+    key: `project:${entry.id}`,
+    value: `reuse_project:${entry.id}`,
+    candidate: `当前项目：${entry.displayName}`,
+    modelSource: "当前项目模型",
+    action: "—",
+    scene: modelScene(slot),
+    actionSource: "—",
+    reuseStatus: "项目内复用",
+    previewUrl: safePreviewUrl(entry.previewUrl),
+  } satisfies ChoiceRow));
+  const center = modelAssets(slot).map((entry) => ({
+    key: `center:${entry.id}`,
+    value: `reuse_asset_center:${entry.id}`,
+    candidate: `Asset Center 候选：\`${entry.displayName}\``,
+    modelSource: "Asset Center 静态 GLB",
+    action: "—",
+    scene: modelScene(slot),
+    actionSource: "—",
+    reuseStatus: "候选复用",
+    previewUrl: safePreviewUrl(entry.previewUrl),
+  } satisfies ChoiceRow));
+  const fallback: ChoiceRow = {
     key: "primitive_fallback",
     value: "primitive_fallback",
-    label: "Three.js 基础几何兜底",
-    source: "程序模型",
-    detail: "只在模型不可用时保证玩法可运行",
-    recommended: slot.model.defaultSource === "primitive_fallback",
-  });
-  return rows;
+    candidate: slot.model.fallbackLabel ?? `Three.js ${slot.name}基础模型`,
+    modelSource: "程序模型",
+    action: "—",
+    scene: modelScene(slot),
+    actionSource: "—",
+    reuseStatus: slot.model.fallbackReuseStatus ?? "加载失败兜底",
+  };
+
+  const reuse = [...project, ...center];
+  const preferredReuse = reuse.find((row) => row.value === selectedDefault);
+  const ordered = preferredReuse
+    ? [preferredReuse, generated, ...reuse.filter((row) => row !== preferredReuse), fallback]
+    : [generated, ...reuse, fallback];
+  return ordered.map((row) => ({ ...row, recommended: row.value === selectedDefault }));
 }
 
-function actionRows(action: any, selectedModel: any): ChoiceRow[] {
+function actionRequirement(action: any) {
+  if (action.requirement) return action.requirement;
+  const name = String(action.name).toLowerCase();
+  if (name === "idle") return "待机动作";
+  if (name.includes("patrol")) return "巡逻动作";
+  if (name.includes("hover") || name.includes("glow")) return "展示动作";
+  if (name === "walk" || name === "move" || name === "run") return "移动动作";
+  return `${action.name}动作`;
+}
+
+function runtimeCandidate(action: any) {
+  if (action.runtimeLabel) return action.runtimeLabel;
+  const name = String(action.name).toLowerCase();
+  if (name === "idle") return "呼吸、重心摇摆、轻微起伏";
+  return "运行时整体移动与轻微摆动";
+}
+
+function actionRows(slot: any, action: any, selectedModel: any): ChoiceRow[] {
+  const currentDefault = defaultActionChoice(action, selectedModel);
+  const defaultValue = modelValue(currentDefault);
+  const reusedBase = selectedModel.source === "reuse_asset_center" || selectedModel.source === "reuse_project";
   const rows: ChoiceRow[] = [];
+
+  if (action.generator && action.preset) {
+    rows.push({
+      key: "generate_action",
+      value: "generate_action",
+      candidate: action.generatedLabel ?? `生成 \`${action.name}\` 动作 GLB`,
+      modelSource: action.generatedModelSource ?? `沿用已选${slot.name}本体`,
+      action: action.name,
+      scene: action.scene,
+      actionSource: `\`${action.preset}\``,
+      reuseStatus: action.generatedReuseStatus ?? "与新本体共用骨骼",
+      disabled: reusedBase && !action.generationRoute?.supportedForReusedBase,
+    });
+  }
+
   for (const entry of action.candidates ?? []) {
-    const linked = Boolean(selectedModel.assetId && entry.parentAssetId === selectedModel.assetId);
+    const hasParent = Boolean(entry.parentAssetId);
+    const linked = Boolean(hasParent && entry.parentAssetId === selectedModel.assetId);
     const compatible = entry.compatibility?.status === "verified";
-    if (!linked && !compatible) continue;
-    const source = linked ? "reuse_linked_action" : "reuse_compatible_action";
+    const source = hasParent ? "reuse_linked_action" : "reuse_compatible_action";
     rows.push({
       key: `${source}:${entry.id}`,
       value: `${source}:${entry.id}`,
-      label: entry.displayName,
-      source: linked ? "关联动作 GLB" : "兼容动作 GLB",
-      detail: assetDetail(entry),
-      previewUrl: previewUrl(entry.previewUrl),
-      recommended: action.defaultSource === source,
+      candidate: `Asset Center：\`${entry.displayName}\``,
+      modelSource: action.linkedModelSource ?? "沿用 Asset Center 本体",
+      action: action.name,
+      scene: action.scene,
+      actionSource: hasParent ? "关联动作 GLB" : "关联或原生动作 GLB",
+      reuseStatus: hasParent ? "`parentAssetId` 必须匹配" : "必须验证兼容关系",
+      previewUrl: safePreviewUrl(entry.previewUrl),
+      disabled: hasParent ? !linked : !(reusedBase && compatible),
+      conditional: true,
     });
   }
-  const reusedBase = selectedModel.source === "reuse_asset_center" || selectedModel.source === "reuse_project";
-  const generationDisabled = reusedBase && !action.generationRoute?.supportedForReusedBase;
-  rows.push({
-    key: "generate_action",
-    value: "generate_action",
-    label: action.preset ?? `生成 ${action.name} 动作 GLB`,
-    source: action.generator ?? "新生成",
-    recommended: action.defaultSource === "generate_action" && !generationDisabled,
-    disabled: generationDisabled,
-  });
+
   rows.push({
     key: "runtime_procedural",
     value: "runtime_procedural",
-    label: "运行时程序动画",
-    source: "程序动画",
-    recommended: action.defaultSource === "runtime_procedural" || generationDisabled,
+    candidate: runtimeCandidate(action),
+    modelSource: action.runtimeModelSource ?? `沿用已选${slot.name}本体`,
+    action: action.name,
+    scene: action.scene,
+    actionSource: action.runtimeSource ?? "运行时程序动画",
+    reuseStatus: action.runtimeReuseStatus ?? (String(action.name).toLowerCase() === "walk" ? "无动作资产" : "无需独立 GLB"),
   });
-  rows.push({
-    key: "primitive_fallback",
-    value: "primitive_fallback",
-    label: "动作兜底",
-    source: "运行时",
-    recommended: action.defaultSource === "primitive_fallback",
-  });
-  return rows;
+
+  if (action.defaultSource === "primitive_fallback") {
+    rows.push({
+      key: "primitive_fallback",
+      value: "primitive_fallback",
+      candidate: "运行时动作兜底",
+      modelSource: `沿用已选${slot.name}本体`,
+      action: action.name,
+      scene: action.scene,
+      actionSource: "运行时程序动画",
+      reuseStatus: "无动作资产",
+    });
+  }
+
+  const preferred = rows.find((row) => row.value === defaultValue && !row.disabled);
+  const ordered = preferred ? [preferred, ...rows.filter((row) => row !== preferred)] : rows;
+  return ordered.map((row) => ({ ...row, recommended: row.value === defaultValue && !row.disabled }));
 }
 
-function ChoiceList({
-  label,
+function RequirementRows({
+  entity,
+  requirement,
   rows,
   selectedValue,
   onSelect,
 }: {
-  label: string;
+  entity: string;
+  requirement: string;
   rows: ChoiceRow[];
   selectedValue: string;
   onSelect: (value: string) => void;
 }) {
-  return <div className="choice-list">{rows.map((row) => {
-    const selected = selectedValue === row.value;
+  return rows.map((row, index) => {
+    const selected = row.value === selectedValue;
     return (
-      <label className="choice-option" data-selected={selected || undefined} data-disabled={row.disabled || undefined} key={row.key}>
-        <input
-          type="checkbox"
-          checked={selected}
-          disabled={row.disabled}
-          onChange={() => onSelect(row.value)}
-          aria-label={`选择${label}：${row.label}`}
-        />
-        <span className="choice-copy">
+      <tr data-selected={selected || undefined} data-disabled={row.disabled || undefined} key={row.key}>
+        <th className="entity-cell" scope="row">{index === 0 ? entity : "〃"}</th>
+        <td>{requirement}</td>
+        <td className="option-cell">{optionLabel(index)}</td>
+        <td className="candidate-cell">
           {row.previewUrl ? (
             <a
-              className="candidate-link"
               href={row.previewUrl}
               target="_blank"
               rel="noreferrer"
               onClick={(event) => {
                 event.preventDefault();
-                event.stopPropagation();
                 void openExternalLink(row.previewUrl!);
               }}
             >
-              {row.label}<span aria-hidden="true">↗</span>
+              <FormattedText value={row.candidate} /><span aria-hidden="true">↗</span>
             </a>
-          ) : <span className="candidate-name">{row.label}</span>}
-          <small>{row.source}{row.detail ? ` · ${row.detail}` : ""}</small>
-        </span>
-        <em>{row.disabled ? "不可用" : selected ? (row.recommended ? "推荐" : "已选") : ""}</em>
-      </label>
+          ) : <FormattedText value={row.candidate} />}
+        </td>
+        <td>{row.modelSource}</td>
+        <td>{row.action === "—" ? "—" : <code>{row.action}</code>}</td>
+        <td>{row.scene}</td>
+        <td><FormattedText value={row.actionSource} /></td>
+        <td><FormattedText value={row.reuseStatus} /></td>
+        <td className="selection-cell">
+          <label>
+            <input
+              type="checkbox"
+              checked={selected}
+              disabled={row.disabled}
+              onChange={() => onSelect(row.value)}
+              aria-label={`选择${entity} ${requirement} ${optionLabel(index)}`}
+            />
+            <span>{selected ? (row.recommended ? "推荐" : "已选择") : row.conditional ? "条件可选" : ""}</span>
+          </label>
+        </td>
+      </tr>
     );
-  })}</div>;
+  });
 }
 
 export function AssetSourcingBoard() {
@@ -281,9 +338,7 @@ export function AssetSourcingBoard() {
     if (proposal && choices) saveWidgetState({ runId: proposal.runId, choices });
   }, [proposal, choices]);
 
-  const summary = useMemo(() => proposal && choices ? totals(proposal, choices) : null, [proposal, choices]);
-
-  if (!proposal || !choices || !summary) return <div className="loading">等待资产方案…</div>;
+  if (!proposal || !choices) return <div className="loading">等待资产方案…</div>;
 
   const updateModel = (slot: any, value: string) => {
     const model = parseChoiceValue(value);
@@ -322,66 +377,53 @@ export function AssetSourcingBoard() {
 
   return (
     <main className="sourcing-shell">
-      <header>
-        <div><h1>资产选择表</h1><p>{proposal.gameSummary ?? "选择每项游戏需求使用的资产方案"}</p></div>
-        <span>{proposal.slots.length} 个关键资产</span>
-      </header>
+      <h1>完整资产确认表</h1>
       {error ? <div className="error-banner">{error}</div> : null}
       <div className="table-scroll">
         <table>
-          <thead><tr><th>角色/实体</th><th>模型来源</th><th>动作</th><th>触发场景</th><th>动作来源</th></tr></thead>
+          <thead>
+            <tr>
+              <th>角色/实体</th>
+              <th>资产需求</th>
+              <th>选项</th>
+              <th>候选方案（点击预览）</th>
+              <th>模型来源</th>
+              <th>动作</th>
+              <th>触发场景</th>
+              <th>动作来源</th>
+              <th>复用状态</th>
+              <th>当前选择</th>
+            </tr>
+          </thead>
           <tbody>
-            {proposal.slots.map((slot: any) => {
+            {proposal.slots.flatMap((slot: any) => {
               const selected = choices.slots[slot.id];
-              if (!selected) return null;
-              const actions = slot.actions.length ? slot.actions : [null];
-              return actions.map((action: any, index: number) => (
-                <tr key={`${slot.id}:${action?.name ?? "static"}`}>
-                  {index === 0 ? (
-                    <th className="entity-cell" rowSpan={actions.length} scope="rowgroup">
-                      <strong>{slot.name}</strong>
-                      <span>{slot.tier}</span>
-                    </th>
-                  ) : null}
-                  {index === 0 ? (
-                    <td className="model-source-cell" rowSpan={actions.length}>
-                      <ChoiceList
-                        label={`${slot.name}模型来源`}
-                        rows={modelRows(slot)}
-                        selectedValue={modelValue(selected.model)}
-                        onSelect={(value) => updateModel(slot, value)}
-                      />
-                    </td>
-                  ) : null}
-                  <td className="action-cell">{action?.name ?? "—"}</td>
-                  <td className="scene-cell">{action?.scene ?? "静态实体，无动作触发"}</td>
-                  <td className="action-source-cell">
-                    {action ? (
-                      <ChoiceList
-                        label={`${slot.name} ${action.name}动作来源`}
-                        rows={actionRows(action, selected.model)}
-                        selectedValue={modelValue(selected.actions[action.name])}
-                        onSelect={(value) => updateAction(slot.id, action.name, value)}
-                      />
-                    ) : <span className="no-action">无需动作</span>}
-                  </td>
-                </tr>
-              ));
+              if (!selected) return [];
+              return [
+                <RequirementRows
+                  key={`${slot.id}:model`}
+                  entity={entityLabel(slot)}
+                  requirement="本体模型"
+                  rows={modelRows(slot)}
+                  selectedValue={modelValue(selected.model)}
+                  onSelect={(value) => updateModel(slot, value)}
+                />,
+                ...slot.actions.map((action: any) => (
+                  <RequirementRows
+                    key={`${slot.id}:${action.name}`}
+                    entity={entityLabel(slot)}
+                    requirement={actionRequirement(action)}
+                    rows={actionRows(slot, action, selected.model)}
+                    selectedValue={modelValue(selected.actions[action.name])}
+                    onSelect={(value) => updateAction(slot.id, action.name, value)}
+                  />
+                )),
+              ];
             })}
           </tbody>
         </table>
       </div>
-      <aside className="rules">
-        <strong>选择说明</strong>
-        <span>每个角色/实体只选择一个模型来源；每个动作只选择一个动作来源。</span>
-        <span>绿色勾选是当前方案；带 ↗ 的名称可点击并在浏览器打开 HTTP 预览页。</span>
-      </aside>
       <footer>
-        <div className="totals">
-          <span>导入 {summary.imports}</span><span>生成模型 {summary.generatedModels}</span>
-          <span>生成动作 {summary.generatedActions}</span><span>运行时 {summary.runtimeActions}</span>
-          <span>Fallback {summary.fallbacks}</span>
-        </div>
         <button className="confirm-button" type="button" disabled={pending} onClick={() => void confirm()}>
           {pending ? "正在确认…" : "确认资产方案并开始制作"}
         </button>

@@ -33,7 +33,7 @@ Ready-to-use GLB files are added to your project
 
 ## What's New (2026-08)
 
-**Reuse before generate.** When the Asset Center personal-assets Plugin is installed, the agent first inspects current-project imports, reads the personal catalog once, and opens a compact MCP App selection table. Its business columns show each entity's model source, action, triggering scene, and action source; reusable asset names open their HTTP preview pages. One final confirmation freezes the plan; only selected Asset Center files are imported and only remaining gaps are sent to generation. Reused and generated GLBs then share the same `/regeneration.html` progress view.
+**Reuse before generate.** When the Asset Center personal-assets Plugin is installed, the agent first inspects current-project imports, reads the personal catalog once, and opens a complete ten-column asset confirmation table. Every model/action requirement expands into A/B/C-style single-choice rows with candidate, model source, action, triggering scene, action source, reuse state, and current selection. Real reusable names open their HTTP preview pages. One final confirmation freezes the plan; only selected Asset Center files are imported and only remaining gaps are sent to generation. Reused and generated GLBs then share the same `/regeneration.html` progress view.
 
 **Session-current Plugin updates.** The Asset Center Plugin checks this Git marketplace once whenever its MCP process starts. If a newer Plugin version exists, that same Codex session launches the newer MCP server; network or update failures fall back to the installed copy.
 

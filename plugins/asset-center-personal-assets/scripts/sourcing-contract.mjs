@@ -37,6 +37,12 @@ export function buildSourcingProposal(args, catalog) {
       missingAssetIds: requestedModelIds.filter((assetId) => !resolvedModelIds.has(assetId)),
       ...(textOrUndefined(modelInput.reason) ? { reason: modelInput.reason.trim() } : {}),
       ...(textOrUndefined(modelInput.generator) ? { generator: modelInput.generator.trim() } : {}),
+      ...(textOrUndefined(modelInput.scene) ? { scene: modelInput.scene.trim() } : {}),
+      ...(textOrUndefined(modelInput.generatedLabel) ? { generatedLabel: modelInput.generatedLabel.trim() } : {}),
+      ...(textOrUndefined(modelInput.generatedSource) ? { generatedSource: modelInput.generatedSource.trim() } : {}),
+      ...(textOrUndefined(modelInput.generatedReuseStatus) ? { generatedReuseStatus: modelInput.generatedReuseStatus.trim() } : {}),
+      ...(textOrUndefined(modelInput.fallbackLabel) ? { fallbackLabel: modelInput.fallbackLabel.trim() } : {}),
+      ...(textOrUndefined(modelInput.fallbackReuseStatus) ? { fallbackReuseStatus: modelInput.fallbackReuseStatus.trim() } : {}),
     };
 
     const seenActions = new Set();
@@ -58,6 +64,15 @@ export function buildSourcingProposal(args, catalog) {
         cost: normalizeCost(action.cost),
         ...(textOrUndefined(action.generator) ? { generator: action.generator.trim() } : {}),
         ...(textOrUndefined(action.preset) ? { preset: action.preset.trim() } : {}),
+        ...(textOrUndefined(action.requirement) ? { requirement: action.requirement.trim() } : {}),
+        ...(textOrUndefined(action.generatedLabel) ? { generatedLabel: action.generatedLabel.trim() } : {}),
+        ...(textOrUndefined(action.generatedModelSource) ? { generatedModelSource: action.generatedModelSource.trim() } : {}),
+        ...(textOrUndefined(action.generatedReuseStatus) ? { generatedReuseStatus: action.generatedReuseStatus.trim() } : {}),
+        ...(textOrUndefined(action.runtimeLabel) ? { runtimeLabel: action.runtimeLabel.trim() } : {}),
+        ...(textOrUndefined(action.runtimeModelSource) ? { runtimeModelSource: action.runtimeModelSource.trim() } : {}),
+        ...(textOrUndefined(action.runtimeSource) ? { runtimeSource: action.runtimeSource.trim() } : {}),
+        ...(textOrUndefined(action.runtimeReuseStatus) ? { runtimeReuseStatus: action.runtimeReuseStatus.trim() } : {}),
+        ...(textOrUndefined(action.linkedModelSource) ? { linkedModelSource: action.linkedModelSource.trim() } : {}),
         ...(action.generationRoute ? { generationRoute: normalizeGenerationRoute(action.generationRoute, `${slotId}.${name}.generationRoute`) } : {}),
       };
     });

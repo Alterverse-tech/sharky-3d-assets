@@ -2,7 +2,7 @@
 
 This plugin lets Codex read the current Asset Center owner's complete library in grouped Static GLB, Action GLB, and Procedural Prop sections, show candidates for selection, and import verified local GLB copies into a game workspace.
 
-Version `0.4.4` replaces the fullscreen three-column board with a compact business selection table. Its fixed columns are 角色/实体、模型来源、动作、触发场景、动作来源; model and action alternatives use single-choice checkboxes, and reusable asset names open their HTTP preview pages. The Widget no longer embeds preview iframes or requests fullscreen. One final sticky confirmation remains, while proposal data, rendering, and confirmation stay separate so non-App clients retain the same structured fallback.
+Version `0.4.5` renders the sourcing gate as a complete asset confirmation table with exactly ten columns: 角色/实体、资产需求、选项、候选方案（点击预览）、模型来源、动作、触发场景、动作来源、复用状态、当前选择. Every asset requirement expands into A/B/C-style single-choice rows. Only real Asset Center candidates appear, their names open HTTP/HTTPS preview pages, linked actions remain conditional on the selected base, and changing the base resets incompatible actions. The footer contains only the final confirmation button; no cost or summary statistics are displayed.
 
 ## Configure
 
