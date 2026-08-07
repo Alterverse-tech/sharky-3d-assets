@@ -49,7 +49,7 @@ Agent integrates everything into a playable Three.js/WebGL game
 
 **Fresh confirmation per game intent.** Historical asset plans are selection snapshots, not current-task authorization. The agent first decides whether history is the active same task, related history, unrelated history, or uncertain. Related history may prefill a newly rendered board; unrelated or uncertain history is ignored, and only a live confirmation in the active asset task unlocks import or generation.
 
-**Session-current Plugin updates.** The Asset Center Plugin checks this Git marketplace once whenever its MCP process starts. If a newer Plugin version exists, that same Codex session launches the newer MCP server; network or update failures fall back to the installed copy.
+**Session-current Plugin updates.** The Asset Center Plugin checks this Git marketplace once whenever its MCP process starts. If a newer Plugin version exists, that same agent session launches the newer MCP server; network or update failures fall back to the installed copy.
 
 **Action requirements confirmation gate.** Before generating any character or creature, the agent reads your game description or script, extracts the actions each entity actually needs, and presents an action requirements table — character/entity, action, triggering scene, suggested source, Tripo preset, and cost. Nothing is generated and no credits are spent until you explicitly confirm; add, remove, or swap rows and the table re-renders. The confirmed list is frozen as the run's action plan.
 
@@ -69,15 +69,15 @@ Agent integrates everything into a playable Three.js/WebGL game
 
 ## Installation
 
-### Install with one prompt in Codex
+### Install with one prompt in Codex or Claude Code
 
-Paste this into any Codex task:
+Paste this into any Codex task or Claude Code session:
 
 ```text
 Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md and install Shark Game Assets for me.
 ```
 
-Codex checks what is already installed, adds only the missing Skill or Plugin components, verifies both results, and asks you to start a new task.
+The agent checks what is already installed, adds only the missing Skill or Plugin components, verifies both results, and asks you to start a new task.
 
 ### Manual installation
 
@@ -98,9 +98,16 @@ codex plugin marketplace add Alterverse-tech/sharky-3d-assets --ref main
 codex plugin add asset-center-personal-assets@sharky-3d-assets
 ```
 
-Set `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex. The Plugin is independent, but when `shark-game-assets` reaches its reuse-before-generation sourcing stage, the personal-assets tools and native selection board become the default reuse path.
+To add the Asset Center Plugin to Claude Code:
 
-Existing users who installed only the Skill receive a one-time Plugin recommendation when a game first reaches asset sourcing. Installation is never silent: Codex waits for confirmation, runs only missing commands, and asks the user to start a new thread before using the newly installed tools.
+```bash
+claude plugin marketplace add Alterverse-tech/sharky-3d-assets
+claude plugin install asset-center-personal-assets@sharky-3d-assets
+```
+
+Set `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex or Claude Code. The Plugin is independent, but when `shark-game-assets` reaches its reuse-before-generation sourcing stage, the personal-assets tools and native selection board become the default reuse path.
+
+Existing users who installed only the Skill receive a one-time Plugin recommendation when a game first reaches asset sourcing. Installation is never silent: the agent waits for confirmation, runs only missing commands, and asks the user to start a new thread before using the newly installed tools.
 
 When no suitable character or linked action is available, choose **[设计人物资产](https://studio.13-216-49-19.sslip.io/asset-center/characters/new)**. After publishing the character and its action GLBs, later game tasks can recommend the reusable static model together with its linked actions.
 
