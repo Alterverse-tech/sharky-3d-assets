@@ -26,11 +26,11 @@ Describe the asset you need, and your coding agent can generate players, enemies
 ```
 Describe your game
         ↓
-Agent writes the game code
+Agent matches reusable assets and prepares the sourcing plan
         ↓
-Shark Game Assets generates the 3D assets
+You confirm: selected GLBs are reused and only gaps are generated
         ↓
-Ready-to-use GLB files are added to your project
+Agent integrates everything into a playable Three.js/WebGL game
 ```
 
 ## Highlights
