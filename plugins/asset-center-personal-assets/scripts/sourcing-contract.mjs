@@ -17,6 +17,7 @@ export function buildSourcingProposal(args, catalog) {
   const slots = args.requirements.map((requirement, index) => {
     assertObject(requirement, `requirements[${index}]`);
     const slotId = requireText(requirement.slotId, `requirements[${index}].slotId`);
+    const name = requireText(requirement.need, `${slotId}.need`);
     if (seenSlots.has(slotId)) throw new Error(`duplicate slotId: ${slotId}`);
     seenSlots.add(slotId);
 
@@ -79,7 +80,8 @@ export function buildSourcingProposal(args, catalog) {
 
     return {
       id: slotId,
-      name: requireText(requirement.need, `${slotId}.need`),
+      name,
+      entityLabel: compactEntityLabel(requirement.entityLabel, name),
       role: requireText(requirement.role, `${slotId}.role`),
       assetKind: requireText(requirement.assetKind, `${slotId}.assetKind`),
       tier: requireText(requirement.tier ?? "key", `${slotId}.tier`),
@@ -95,6 +97,7 @@ export function buildSourcingProposal(args, catalog) {
     schema: "shark-asset-sourcing-proposal",
     runId,
     ...(textOrUndefined(args.gameSummary) ? { gameSummary: args.gameSummary.trim() } : {}),
+    intentSnapshot: buildIntentSnapshot(args.gameSummary, slots),
     slots,
   };
   return { ...proposal, totals: totalsForDefaults(proposal) };
@@ -121,6 +124,7 @@ export function normalizeConfirmedSourcingPlan(proposal, uiState, confirmedAt = 
     return {
       id: slot.id,
       name: slot.name,
+      entityLabel: compactEntityLabel(slot.entityLabel, slot.name),
       role: slot.role,
       assetKind: slot.assetKind,
       tier: slot.tier,
@@ -135,6 +139,7 @@ export function normalizeConfirmedSourcingPlan(proposal, uiState, confirmedAt = 
     version: 1,
     schema: "shark-asset-sourcing-plan",
     runId: requireText(proposal.runId, "proposal.runId"),
+    intentSnapshot: buildIntentSnapshot(proposal.gameSummary, proposal.slots),
     confirmation: {
       confirmed: true,
       confirmedBy: "user",
@@ -143,6 +148,18 @@ export function normalizeConfirmedSourcingPlan(proposal, uiState, confirmedAt = 
     slots,
   };
   return { ...plan, totals: totalsForPlan(plan) };
+}
+
+function buildIntentSnapshot(gameSummary, slots) {
+  return {
+    gameSummary: textOrUndefined(gameSummary) ?? "",
+    slots: slots.map((slot) => ({
+      id: slot.id,
+      role: slot.role,
+      assetKind: slot.assetKind,
+      actions: slot.actions.map((action) => action.name),
+    })),
+  };
 }
 
 function buildLegacyManifest(args, entries) {
@@ -374,6 +391,13 @@ function requireText(value, name) {
 
 function textOrUndefined(value) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function compactEntityLabel(value, fallback) {
+  const raw = textOrUndefined(value) ?? requireText(fallback, "entity label");
+  const concise = raw.split(/[，,；;。:：\n]/, 1)[0].trim() || raw;
+  const characters = Array.from(concise);
+  return characters.length <= 16 ? concise : `${characters.slice(0, 15).join("")}…`;
 }
 
 function assertObject(value, name) {

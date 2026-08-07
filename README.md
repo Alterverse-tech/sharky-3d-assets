@@ -11,25 +11,38 @@
 </div>
 
 ```text
-Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md and install Shark Game Assets for me.
+/goal Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md to install the Shark Game Assets Skill and Asset Center Plugin, then set up a new task for me.
 ```
 
-<img width="2390" height="1496" alt="image" src="https://github.com/user-attachments/assets/8cfaee9a-f5fa-4aaa-a948-1d3a37960f31" />
+
+
 
 > **Generate production-ready 3D game assets without leaving your coding workflow.**
 
 `shark-game-assets` is an agent skill for generating game-ready `.glb` assets while building Three.js and WebGL games.
 
-Describe the asset you need, and your coding agent can generate players, enemies, collectibles, props, and environmental objects through the Shark Game Assets remote generation service.
+
+
+
+
+
+> **claude code,confirm and use your exists model or create new one**
+<img width="1768" height="890" alt="ChatGPT Image Aug 7, 2026, 08_46_28 PM" src="https://github.com/user-attachments/assets/2a56d4a7-3a05-4a10-bd70-308dcf972a59" />
+
+
+> **codex,confirm and use your exists model or create new one**
+<img width="3430" height="1926" alt="image" src="https://github.com/user-attachments/assets/28cbe92b-be36-459d-b922-2c1101e73713" />
+
+
 
 ```
 Describe your game
         ↓
-Agent writes the game code
+Agent matches reusable assets and prepares the sourcing plan
         ↓
-Shark Game Assets generates the 3D assets
+You confirm: selected GLBs are reused and only gaps are generated
         ↓
-Ready-to-use GLB files are added to your project
+Agent integrates everything into a playable Three.js/WebGL game
 ```
 
 ## Highlights
@@ -46,7 +59,9 @@ Ready-to-use GLB files are added to your project
 
 **Reuse before generate.** When the Asset Center personal-assets Plugin is installed, the agent first inspects current-project imports, reads the personal catalog once, and opens a complete ten-column asset confirmation table. Every model/action requirement expands into A/B/C-style single-choice rows with candidate, model source, action, triggering scene, action source, reuse state, and current selection. Real reusable names open their HTTP preview pages. One final confirmation freezes the plan; only selected Asset Center files are imported and only remaining gaps are sent to generation. Reused and generated GLBs then share the same `/regeneration.html` progress view.
 
-**Session-current Plugin updates.** The Asset Center Plugin checks this Git marketplace once whenever its MCP process starts. If a newer Plugin version exists, that same Codex session launches the newer MCP server; network or update failures fall back to the installed copy.
+**Fresh confirmation per game intent.** Historical asset plans are selection snapshots, not current-task authorization. The agent first decides whether history is the active same task, related history, unrelated history, or uncertain. Related history may prefill a newly rendered board; unrelated or uncertain history is ignored, and only a live confirmation in the active asset task unlocks import or generation.
+
+**Session-current Plugin updates.** The Asset Center Plugin checks this Git marketplace once whenever its MCP process starts. If a newer Plugin version exists, that same agent session launches the newer MCP server; network or update failures fall back to the installed copy.
 
 **Action requirements confirmation gate.** Before generating any character or creature, the agent reads your game description or script, extracts the actions each entity actually needs, and presents an action requirements table — character/entity, action, triggering scene, suggested source, Tripo preset, and cost. Nothing is generated and no credits are spent until you explicitly confirm; add, remove, or swap rows and the table re-renders. The confirmed list is frozen as the run's action plan.
 
@@ -66,15 +81,15 @@ Ready-to-use GLB files are added to your project
 
 ## Installation
 
-### Install with one prompt in Codex
+### Install with one prompt in Codex or Claude Code
 
-Paste this into any Codex task:
+Paste this into any Codex task or Claude Code session:
 
 ```text
 Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md and install Shark Game Assets for me.
 ```
 
-Codex checks what is already installed, adds only the missing Skill or Plugin components, verifies both results, and asks you to start a new task.
+The agent checks what is already installed, adds only the missing Skill or Plugin components, verifies both results, and asks you to start a new task.
 
 ### Manual installation
 
@@ -88,6 +103,13 @@ npx skills add https://github.com/Alterverse-tech/sharky-3d-assets \
 
 After installation, the skill becomes available to compatible coding agents on your machine.
 
+Claude Code can install the skill from the plugin marketplace instead of the Skills CLI (pick one mechanism, not both):
+
+```bash
+claude plugin marketplace add Alterverse-tech/sharky-3d-assets
+claude plugin install shark-game-assets@sharky-3d-assets
+```
+
 To add the Asset Center Plugin to Codex:
 
 ```bash
@@ -95,9 +117,16 @@ codex plugin marketplace add Alterverse-tech/sharky-3d-assets --ref main
 codex plugin add asset-center-personal-assets@sharky-3d-assets
 ```
 
-Set `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex. The Plugin is independent, but when `shark-game-assets` reaches its reuse-before-generation sourcing stage, the personal-assets tools and native selection board become the default reuse path.
+To add the Asset Center Plugin to Claude Code:
 
-Existing users who installed only the Skill receive a one-time Plugin recommendation when a game first reaches asset sourcing. Installation is never silent: Codex waits for confirmation, runs only missing commands, and asks the user to start a new thread before using the newly installed tools.
+```bash
+claude plugin marketplace add Alterverse-tech/sharky-3d-assets
+claude plugin install asset-center-personal-assets@sharky-3d-assets
+```
+
+Set `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex or Claude Code. The Plugin is independent, but when `shark-game-assets` reaches its reuse-before-generation sourcing stage, the personal-assets tools and native selection board become the default reuse path.
+
+Existing users who installed only the Skill receive a one-time Plugin recommendation when a game first reaches asset sourcing. Installation is never silent: the agent waits for confirmation, runs only missing commands, and asks the user to start a new thread before using the newly installed tools.
 
 When no suitable character or linked action is available, choose **[设计人物资产](https://studio.13-216-49-19.sslip.io/asset-center/characters/new)**. After publishing the character and its action GLBs, later game tasks can recommend the reusable static model together with its linked actions.
 

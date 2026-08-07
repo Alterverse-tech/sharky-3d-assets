@@ -1,6 +1,6 @@
 {
   "name": "asset-center-personal-assets",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "Match, preview, and safely import a user's personal Asset Center models into Codex game projects — including story-driven semantic recall of the whole personal library.",
   "author": {
     "name": "Shark Studio"

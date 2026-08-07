@@ -16,4 +16,5 @@ await build({
   sourcemap: false,
   legalComments: "none",
   jsx: "automatic",
+  charset: "utf8",
 });

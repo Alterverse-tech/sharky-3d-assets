@@ -64,7 +64,10 @@ function safePreviewUrl(value?: string) {
 }
 
 function entityLabel(slot: any) {
-  return slot.tier ? `${slot.name}（${slot.tier}）` : slot.name;
+  const raw = String(slot.entityLabel ?? slot.name ?? slot.id ?? "资产").trim();
+  const concise = raw.split(/[，,；;。:：\n]/, 1)[0].trim() || raw;
+  const characters = Array.from(concise);
+  return characters.length <= 16 ? concise : `${characters.slice(0, 15).join("")}…`;
 }
 
 function optionLabel(index: number) {
@@ -325,7 +328,7 @@ function RequirementRows({
     const selected = row.value === selectedValue;
     return (
       <tr data-selected={selected || undefined} data-disabled={row.disabled || undefined} key={row.key}>
-        <th className="entity-cell" scope="row">{index === 0 ? entity : "〃"}</th>
+        <th className="entity-cell" scope="row">{index === 0 ? <span className="entity-label">{entity}</span> : "〃"}</th>
         <td>{requirement}</td>
         <td className="option-cell">{optionLabel(index)}</td>
         <td className="selection-cell">
