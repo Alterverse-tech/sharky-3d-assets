@@ -1,0 +1,21 @@
+{
+  "name": "sharky-3d-assets",
+  "owner": {
+    "name": "Shark Studio"
+  },
+  "plugins": [
+    {
+      "name": "asset-center-personal-assets",
+      "source": "./plugins/asset-center-personal-assets",
+      "description": "Match, preview, and safely import your personal Asset Center models into game projects — including story-driven semantic recall of the whole personal library.",
+      "version": "0.4.7",
+      "author": {
+        "name": "Shark Studio"
+      },
+      "homepage": "https://github.com/Alterverse-tech/sharky-3d-assets",
+      "repository": "https://github.com/Alterverse-tech/sharky-3d-assets",
+      "category": "developer-tools",
+      "keywords": ["3d", "glb", "game-assets", "asset-center", "threejs"]
+    }
+  ]
+}
