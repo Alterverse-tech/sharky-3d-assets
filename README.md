@@ -1,6 +1,18 @@
-# Shark Game Assets
+<div align="center">
+  <h1>Your AI 3D Game Asset Assistant</h1>
+  <p>Generate, animate, reuse, and integrate production-ready GLB assets without leaving your coding workflow.</p>
+  <p>
+    <a href="https://studio.13-216-49-19.sslip.io/asset-center/"><img src="docs/img/button-open-asset-center.svg" alt="Open Asset Center" width="238"></a>
+    <a href="https://github.com/Alterverse-tech/sharky-3d-assets/blob/main/INSTALL.md"><img src="docs/img/button-use-in-codex.svg" alt="Use in Codex" width="238"></a>
+    <a href="https://www.skills.sh/alterverse-tech/sharky-3d-assets/shark-game-assets"><img src="docs/img/button-use-in-claude.svg" alt="Use in Claude" width="238"></a>
+  </p>
+  <h3>Install with one prompt in Codex</h3>
+  <p>Paste the prompt below into any task in the Codex desktop app.</p>
+</div>
 
-## Documentation and downloads: 
+```text
+Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md and install Shark Game Assets for me.
+```
 
 <img width="2390" height="1496" alt="image" src="https://github.com/user-attachments/assets/8cfaee9a-f5fa-4aaa-a948-1d3a37960f31" />
 
