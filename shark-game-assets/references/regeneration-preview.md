@@ -175,7 +175,27 @@ curl -fsS -D - -o /tmp/regeneration-status.json \
 
 Do not assume the process bound to `0.0.0.0` receives `127.0.0.1` traffic when another process is already bound specifically to `127.0.0.1` on the same port. Stop the stale listener only when authorized, or choose a different port and report it.
 
-## 8. Failure modes
+## 8. Verified preview link delivery
+
+Before a user-facing update reports the preview as available, verify the current project's listener with `lsof`, run `validate-regeneration-preview.mjs`, and check the exact page URL rather than only its status JSON:
+
+```bash
+preview_url="http://127.0.0.1:<port>/regeneration.html"
+http_status="$(curl -fsS -o /dev/null -w '%{http_code}' "$preview_url")"
+test "$http_status" = "200"
+```
+
+Only an HTTP `200` response permits link delivery. The first progress update after that verification must include this Markdown shape, with `<port>` replaced by the verified current port:
+
+```md
+素材预览：[http://127.0.0.1:<port>/regeneration.html](http://127.0.0.1:<port>/regeneration.html)
+```
+
+The final user-facing handoff must repeat the same clickable link before hashes, QA, or residual risks. Never leave the user with only `/regeneration.html`, a port number, or a non-clickable URL. If listener, validator, or page verification fails, state that `preview is temporarily unavailable` (素材预览暂不可用) and do not invent a link.
+
+This HTTP check proves only that the local preview page is served. It does not prove browser gameplay, rendered asset quality, or character-orientation acceptance; report those verification boundaries separately.
+
+## 9. Failure modes
 
 - **Progress says success, button remains disabled:** the GLB has not been downloaded to `public/generated-assets`; keep it at 99% running.
 - **Old models appear:** use a fresh plan `runId`/`startedAt`; remove or isolate stale job files and never merge previous status as truth.

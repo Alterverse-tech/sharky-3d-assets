@@ -87,6 +87,10 @@ Default asset-preview checklist:
 6. After all tasks finish, update `asset_manifest.json` and game code using the same semantic mapping shown in the preview page.
 7. Run `validate-regeneration-preview.mjs` before claiming the preview website is ready.
 
+### Verified preview link delivery
+
+Before reporting a local preview URL to the user, follow the verified preview link delivery contract in [references/regeneration-preview.md](references/regeneration-preview.md). Only report its Markdown link after the current project's listener, preview validator, and exact `/regeneration.html` HTTP check pass. Put that clickable link in the first verified progress update and repeat it in the final user-facing handoff; do not report a bare path or port.
+
 ## Route choice
 
 Use `tripo` for the fast route: direct text prompt to Tripo3D text-to-model. This is best for generic props, enemies, collectibles, vehicles, obstacles, and fast iteration. A tripo-route GLB is delivered static and stays static: the local manifest carries no Tripo task id (the client strips provider task ids during anonymization), while the rig/retarget flow requires `originalModelTaskId`, so a tripo-route GLB cannot enter the `tripo-rig-clip` flow afterwards. For skill-generated assets, rigged characters with retarget clips come only from the `gemini_reference` route completing its server-side rig stage; separately, a Tripo task id the user supplies from their own account can enter the `tripo-rig-clip` flow directly.
