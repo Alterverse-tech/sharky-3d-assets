@@ -11,12 +11,14 @@ const ACTION_SOURCES = new Set(["reuse_linked_action", "reuse_compatible_action"
 export async function validateAssetSourcingPlan(plan, { cwd = process.cwd(), requireResolved = false } = {}) {
   const root = path.resolve(cwd);
   const errors = [];
-  if (!plan || typeof plan !== "object" || Array.isArray(plan)) return { errors: ["plan must be an object"] };
+  if (!plan || typeof plan !== "object" || Array.isArray(plan)) {
+    return { errors: ["plan must be an object"], currentTaskAuthorization: "not_evaluated" };
+  }
   rejectRemoteUrls(plan, "$", errors);
   if (plan.schema !== "shark-asset-sourcing-plan") errors.push('schema must be "shark-asset-sourcing-plan"');
   if (!text(plan.runId)) errors.push("runId is required");
   if (!plan.confirmation || plan.confirmation.confirmed !== true || plan.confirmation.confirmedBy !== "user" || !text(plan.confirmation.confirmedAt)) {
-    errors.push("explicit user confirmation is required");
+    errors.push("confirmation audit metadata is required for a frozen selection snapshot; disk metadata does not establish current-task authorization");
   }
   if (!Array.isArray(plan.slots) || plan.slots.length === 0) errors.push("slots must be non-empty");
 
@@ -49,7 +51,7 @@ export async function validateAssetSourcingPlan(plan, { cwd = process.cwd(), req
       await validateAction(slot, action, root, requireResolved, errors);
     }
   }
-  return { errors };
+  return { errors, currentTaskAuthorization: "not_evaluated" };
 }
 
 async function validateModel(slot, root, requireResolved, errors) {
@@ -153,12 +155,12 @@ async function runCli() {
   try {
     plan = JSON.parse(await readFile(path.join(cwd, planFile), "utf8"));
   } catch (error) {
-    process.stdout.write(`${JSON.stringify({ status: "failed", cwd, plan: planFile, errors: [`${planFile}: ${error.message}`] }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ status: "failed", cwd, plan: planFile, currentTaskAuthorization: "not_evaluated", errors: [`${planFile}: ${error.message}`] }, null, 2)}\n`);
     process.exitCode = 1;
     return;
   }
   const result = await validateAssetSourcingPlan(plan, { cwd, requireResolved: argv.includes("--require-resolved") });
-  process.stdout.write(`${JSON.stringify({ status: result.errors.length ? "failed" : "ok", cwd, plan: planFile, errors: result.errors }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ status: result.errors.length ? "failed" : "ok", cwd, plan: planFile, currentTaskAuthorization: result.currentTaskAuthorization, errors: result.errors }, null, 2)}\n`);
   if (result.errors.length) process.exitCode = 1;
 }
 

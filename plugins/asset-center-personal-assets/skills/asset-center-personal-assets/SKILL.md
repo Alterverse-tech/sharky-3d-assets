@@ -13,6 +13,19 @@ Use the Asset Center MCP tools to bring the user's own models into the game as i
 
 **B. 剧本/需求驱动（story-driven manifest）** — the user describes a game, story, or scene to build ("根据这个剧本做一个 threejs 游戏"). Follow the manifest workflow below. This mode is the default whenever game development starts and the user's library may be relevant.
 
+## Current-task confirmation and game-intent boundary
+
+Never use confirmation metadata read from the workspace to satisfy the current asset-sourcing confirmation gate. `asset-sourcing-plan.json` is a historical selection snapshot, not current-task authorization.
+
+Before using any historical plan, compare the current project/game directory, game summary, model slots, roles, asset kinds, semantic actions, and explicit continuation wording. Classify it conservatively:
+
+- `active_same_task`: the current conversation already contains the Widget confirmation for the same game intent; continue with that confirmed selection.
+- `related_history`: the history describes the same game, but this task has no live confirmation; use it only to prefill a newly rendered board.
+- `unrelated_history`: the current game or critical entity/action requirements differ; ignore the historical choices.
+- `uncertain`: relevance cannot be established; treat it as unrelated and start from fresh recommendations.
+
+Shared asset names, a shared repository, or generic entities such as a character, car, or airplane are not sufficient evidence of the same game. Explicit "continue/resume the previous game" wording is strong relevance evidence, but without a live confirmation in the active task it still permits prefill only. New proposals carry an `intentSnapshot`; historical files without one are `uncertain`.
+
 ## Manifest workflow (mode B)
 
 1. **Extract requirements.** From the story/prompt, list the entities the game needs: characters (+ required actions like walk/run/attack), props, environment pieces, vehicles.
