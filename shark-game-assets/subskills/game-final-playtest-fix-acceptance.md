@@ -12,8 +12,9 @@ Complete this gate after the game and its assets are integrated and a runnable b
 1. Locate the project root, original script or requirements, game entry, run/build/test commands, asset manifest, player controller, world/collision system, puzzle state, save system, and ending definitions. Read applicable `AGENTS.md` files before using tools or editing.
 2. Derive a compact oracle from the original script or requirements: areas, progression gates, puzzles, required clues/items, characters, physical actions, fail states, main ending, alternate endings, controls, visual tone, and explicit timing rules. Treat this oracle—not the current code—as expected behavior.
 3. Build the game and run existing tests without rewriting files. Start or reuse the documented server, verify the intended URL returns HTTP 200, and identify missing assets or console/runtime errors.
-4. Ask for Browser/Computer Use permission when active instructions require it. If authorization is denied or browser control is unavailable, continue with source, build, unit, asset, and rendered checks; never describe those as browser playtesting.
-5. Create or reuse `artifacts/playtest/QA_REPORT.md`. Store evidence images in `artifacts/playtest/` with ordered, descriptive names such as `01-baseline-title.png` and `12-fixed-player-facing.png`.
+4. Run `validate-game-asset-integration.mjs` against the confirmed sourcing plan and manifest. When any confirmed model slot is not `primitive_fallback`, the final retest must also run it with `--require-runtime` against `artifacts/playtest/asset-runtime-report.json`; bind that report to the playable game scene URL, current entry-file hash, and hashed screenshot/video/frame evidence. A confirmed GLB that is missing, invisible, replaced by a primitive, hash/path-mismatched, or paired with the wrong/unplayed confirmed action is a blocking failure. Asset-preview evidence cannot satisfy this game-scene gate.
+5. Ask for Browser/Computer Use permission when active instructions require it. If authorization is denied or browser control is unavailable, continue with source, build, unit, asset, and rendered checks; never describe those as browser playtesting. A user screenshot or independent renderer may supply the GLB runtime evidence; source/HTTP evidence may not.
+6. Create or reuse `artifacts/playtest/QA_REPORT.md`. Store evidence images in `artifacts/playtest/` with ordered, descriptive names such as `01-baseline-title.png` and `12-fixed-player-facing.png`.
 
 ## 2. Run An Independent Senior Playtest
 
@@ -59,10 +60,11 @@ Use only these evidence types: `BROWSER_PLAYTEST`, `USER_PLAYTEST`, `RENDERED`, 
 
 1. Reproduce each P0–P2 against the independent oracle before changing code. Fix P0, then P1, then P2. Fix P3 when safe and inexpensive; otherwise retain it as a named residual.
 2. Preserve unrelated user changes. Keep visual GLBs separate from stable gameplay hitboxes. Make doors, gates, shelves, racks, levers, locks, liquids, and other mechanisms perform the physical action described before collision or progression changes allow passage.
-3. Add independent regression coverage for deterministic rules such as puzzle prerequisites, reset behavior, timers, save migrations, direction vectors, and simultaneous-input windows.
-4. Do not use the same unverified production constant, helper, or branch as both implementation input and test oracle. Derive expected values from the script, trusted manifest metadata, independent geometry/render inspection, or explicit test fixtures.
-5. For direction-sensitive models, independently audit the native visual forward axis. Verify all cardinal and diagonal movement directions mathematically against actual velocity, then inspect at least one rendered movement sequence. Pure mathematical self-consistency cannot prove face direction.
-6. Permit a temporary same-origin state-seed page only for late-game targeted retests. Name it clearly, use it only on the local test origin, and delete it before handoff. It never replaces the continuous main-path run.
+3. Treat a confirmed GLB rendered as a primitive or omitted from the live scene as P0. Preserve the fallback for load failure, but do not accept it as satisfying the confirmed slot; only sourcing-plan slots explicitly confirmed as `primitive_fallback` may pass that way.
+4. Add independent regression coverage for deterministic rules such as puzzle prerequisites, reset behavior, timers, save migrations, direction vectors, and simultaneous-input windows.
+5. Do not use the same unverified production constant, helper, or branch as both implementation input and test oracle. Derive expected values from the script, trusted manifest metadata, independent geometry/render inspection, or explicit test fixtures.
+6. For direction-sensitive models, independently audit the native visual forward axis. Verify all cardinal and diagonal movement directions mathematically against actual velocity, then inspect at least one rendered movement sequence. Pure mathematical self-consistency cannot prove face direction.
+7. Permit a temporary same-origin state-seed page only for late-game targeted retests. Name it clearly, use it only on the local test origin, and delete it before handoff. It never replaces the continuous main-path run.
 
 ## 5. Retest And Iterate
 
@@ -73,9 +75,10 @@ For each round:
 1. Run existing and new unit/integration tests, lint/static checks, and the production build.
 2. Verify the documented server and URL, HTTP status, asset requests, and console errors.
 3. Re-run every repaired issue using the same externally observable reproduction where possible.
-4. Re-run the continuous main path and chosen ending after the final repair round when browser playtesting is available.
-5. Capture fixed-state evidence separately from baseline evidence.
-6. Check that temporary seeds/debug overlays are removed and that production gameplay does not depend on test-only state.
+4. Re-run `validate-game-asset-integration.mjs --require-runtime` whenever the confirmed plan contains GLB slots, and include its exact result plus the observed runtime report in the QA evidence.
+5. Re-run the continuous main path and chosen ending after the final repair round when browser playtesting is available.
+6. Capture fixed-state evidence separately from baseline evidence.
+7. Check that temporary seeds/debug overlays are removed and that production gameplay does not depend on test-only state.
 
 After the second repair round, do not continue silently. If any P0–P2 remains, record it and return `NOT_ACCEPTED`.
 
@@ -101,7 +104,7 @@ Include:
 Use exactly one final status:
 
 - `ACCEPTED_PLAYTESTED`: actual browser/user playtesting completed the main path and one ending, and no P0–P2 remains.
-- `ACCEPTED_STATIC_ONLY`: browser playtesting was not authorized or unavailable, but build, tests, assets, and source/rule audits pass with no known P0–P2. State prominently that lighting, feel, orientation, animation, and other visual behavior remain unverified unless separately rendered.
+- `ACCEPTED_STATIC_ONLY`: browser playtesting was not authorized or unavailable, but build, tests, assets, and source/rule audits pass with no known P0–P2. This status is unavailable when a playable game has confirmed GLB slots but lacks a passing `--require-runtime` asset report from browser, user, or rendered evidence. State prominently that lighting, feel, orientation, animation, and other visual behavior remain unverified unless separately rendered.
 - `NOT_ACCEPTED`: the build or main path fails, the chosen ending cannot complete, or any P0–P2 remains after two rounds.
 
 P3 issues may remain only when explicitly listed as non-blocking. Do not delete, downgrade, or hide a finding merely to reach acceptance.

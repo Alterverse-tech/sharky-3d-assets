@@ -21,7 +21,6 @@ Before taking task actions with this skill, perform a best-effort self-update ch
 ## Required behavior
 
 - For every task that generates, regenerates, rigs, animates, or integrates GLB assets, complete the asset sourcing confirmation gate before any import or generation. After confirmation, create or restore the canonical local preview/progress page by default, even when the user did not ask for it. In a fresh project this stage is a generate-and-deploy, not a restore: create the page files from the bundled template and start (or reuse) the local server so `/regeneration.html` is verifiably served before the first remote generation call — and narrate it to the user as generating/deploying, saying "restore" only when the page previously existed. Keep status synchronized until the task finishes.
-- For a playable game request with named asset entities, never present a primitive-only prototype as the completed game. Before delivery, complete the applicable sourcing and action-confirmation gates, canonical preview/progress, GLB generation or reuse, manifest update, and GLTF integration; primitive geometry is only an interim placeholder and runtime loading-failure fallback.
 - Skip the default preview only for publish-only requests, help/explanation-only requests, readiness-only or other read-only inspection that does not generate/integrate asset files, or when the user explicitly declines a preview page.
 - If the game prompt contains explicit or implicit entities, such as a player, character, enemy, collectible, vehicle, weapon, obstacle, boss, mascot, key prop, or environment object, GLB generation is a required stage when the tool is available.
 - Generate only 1-3 key assets by default. Prioritize the player/main character first, then the gameplay-critical enemy, collectible, vehicle, hazard, or key prop. Do not generate decorative filler.
@@ -32,6 +31,7 @@ Before taking task actions with this skill, perform a best-effort self-update ch
 - Before generating or wiring any character/creature action clips (including the default `walk` from the `gemini_reference` continuation), complete the action requirements confirmation gate: understand the game description, present the action requirements table, apply the user's edits, and proceed only after the user's explicit confirmation. See "Action requirements confirmation (animation planning gate)".
 - When the Asset Center personal-assets Plugin is available, its one final sourcing-board confirmation also satisfies the action requirements confirmation gate. Do not ask for a second confirmation over the same model/action choices.
 - Use primitive Three.js geometry only as an interim placeholder while assets are pending and as the runtime fallback if a GLB fails to load.
+- Treat a confirmed GLB that is absent, invisible, or replaced by a primitive at runtime as a P0 integration failure. Only a slot whose confirmed `model.source` is `primitive_fallback` may pass with a primitive. Before handoff, run `validate-game-asset-integration.mjs`; final acceptance for any confirmed GLB requires its `--require-runtime` gate and observed runtime evidence.
 - Use the configured asset-generation service as a public anonymous endpoint from Codex, Claude Code, other compatible agent clients, and direct CLI installs. Do not request, read, send, store, mention, or expose any client credential; asset-generation users need neither a login nor a token.
 - If the asset service is unreachable or a platform policy blocks the remote call, pause the asset workflow and report that the asset service is temporarily unavailable. Do not ask the user for credentials and do not silently replace requested GLB generation with local placeholders.
 - Do not regenerate existing assets unless the user explicitly asks. If `asset_manifest.json` already has loadable assets, reuse it.
@@ -348,8 +348,21 @@ node <skill-dir>/scripts/game-assets-mcp.mjs generate --cwd "$(pwd)" --params '{
    - The command reports concise progress on stderr while polling (typically 1-3 minutes per batch), then prints JSON on stdout; exit code 1 means the batch failed.
 8. After the command returns, merge reused and generated entries into `asset_manifest.json`. Treat that file as the source of truth and keep the preview synchronizer running until every successful local GLB/action appears.
 9. Wire `manifest.assets` into the game code with Three.js `GLTFLoader`. Treat the manifest as a semantic registry: choose assets by `bindings`, `id`, or `role`, and choose animations by `actions.<name>.url` or legacy `animationClips[].name`/`preset`, never by guessing file names or folders.
-10. Keep a local primitive fallback for every generated or reused asset. The game must remain playable when a GLB fails to load.
-11. Run `validate-regeneration-preview.mjs`, then stop the synchronizer normally after final status and manifest are stable.
+10. Keep a local primitive fallback for every generated or reused asset. The game must remain playable when a GLB fails to load, but a fallback does not satisfy a confirmed GLB slot for final acceptance.
+11. Run the deterministic static integration gate after wiring. It compares every confirmed non-primitive model/action against `asset_manifest.json`, its local runtime GLB, and resolved hash/size metadata:
+
+```bash
+node <skill-dir>/scripts/validate-game-asset-integration.mjs --cwd "$(pwd)"
+```
+
+12. During an observed browser, user, or rendered playtest of the playable game scene, write `artifacts/playtest/asset-runtime-report.json` using [templates/asset-runtime-report.sample.json](templates/asset-runtime-report.sample.json). Bind the report to the playable game URL, current HTML page and entry-file hashes, and fresh hashed screenshot/video/frame evidence created after the confirmed plan and current build. Record every confirmed GLB model as `loaded` and `visible` with its scene object name and `fallbackVisible: false`; record every confirmed GLB action as `playing` or `played` with its manifest URL, GLB hash, and an actual clip name present inside that action GLB. Preview-page rendering is not game-integration evidence. Do not derive or handwrite this report from source inspection. Then run the blocking runtime gate:
+
+```bash
+node <skill-dir>/scripts/validate-game-asset-integration.mjs --cwd "$(pwd)" --require-runtime
+```
+
+   A confirmed GLB reported as `primitive_fallback`, a mismatched URL/hash, a missing visible model, an unplayed confirmed action, or missing runtime evidence blocks completion as `NOT_ACCEPTED`. `ACCEPTED_STATIC_ONLY` is not available for a playable game with confirmed GLB slots that lack this runtime evidence.
+13. Run `validate-regeneration-preview.mjs`, then stop the synchronizer normally after final status and manifest are stable.
 
 ## Publish a completed game to the Shark portal
 

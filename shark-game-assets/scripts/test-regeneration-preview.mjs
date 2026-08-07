@@ -20,7 +20,8 @@ function run(script, args = []) {
 
 try {
   const skill = await readFile(path.resolve(scriptDir, "../SKILL.md"), "utf8");
-  assert.match(skill, /For every task that generates, regenerates, rigs, animates, or integrates GLB assets, create or restore the canonical local preview\/progress page by default/);
+  assert.match(skill, /For every task that generates, regenerates, rigs, animates, or integrates GLB assets, complete the asset sourcing confirmation gate/);
+  assert.match(skill, /After confirmation, create or restore the canonical local preview\/progress page by default/);
   assert.match(skill, /Skip the default preview only for publish-only requests, help\/explanation-only requests, readiness-only or other read-only inspection/);
   assert.match(skill, /public anonymous endpoint/i);
   const assetWorkflow = skill.slice(skill.indexOf("## Asset tool workflow"), skill.indexOf("## Publish a completed game"));

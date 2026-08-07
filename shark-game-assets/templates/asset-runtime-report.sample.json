@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "schema": "shark-game-asset-runtime-report",
+  "runId": "confirmed-sourcing-run-id",
+  "observedAt": "2026-08-07T12:00:00.000Z",
+  "evidenceType": "BROWSER_PLAYTEST",
+  "game": {
+    "scene": "game",
+    "url": "http://127.0.0.1:4173/",
+    "pageFile": "index.html",
+    "pageSha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "entryFile": "src/main.js",
+    "entrySha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "evidence": [
+    {
+      "kind": "screenshot",
+      "path": "artifacts/playtest/fixed-confirmed-player.png",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  ],
+  "slots": [
+    {
+      "id": "player",
+      "model": {
+        "status": "loaded",
+        "visible": true,
+        "fallbackVisible": false,
+        "objectName": "player-visual-root",
+        "url": "/assets/asset-center/player--ast_player/model.glb",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actions": {
+        "run": {
+          "status": "played",
+          "url": "/assets/asset-center/player-run--ast_run/model.glb",
+          "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "clipName": "preset:biped:run"
+        }
+      }
+    },
+    {
+      "id": "car-hazard",
+      "model": {
+        "status": "primitive_fallback",
+        "visible": true
+      },
+      "actions": {}
+    }
+  ]
+}
