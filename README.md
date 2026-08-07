@@ -1,7 +1,6 @@
 # Shark Game Assets
 
 ## Documentation and downloads: 
-https://studio.13-216-49-19.sslip.io/generated-assets/site/
 
 <img width="2390" height="1496" alt="image" src="https://github.com/user-attachments/assets/8cfaee9a-f5fa-4aaa-a948-1d3a37960f31" />
 
