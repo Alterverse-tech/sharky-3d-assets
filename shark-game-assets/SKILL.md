@@ -115,7 +115,19 @@ The Plugin bootstrap owns its startup and update check. This Skill never install
 
 When `list_asset_catalog`, `propose_asset_manifest`, and the other personal-assets tools are all absent, distinguish that from an installed Plugin whose API/auth call failed. For the absent-tools case, immediately stop the asset workflow and ask once per game asset task:
 
-> 检测到 Asset Center Plugin 未安装。本次资产流程已暂停，不会自动降级为本地复用或直接生成。请选择：安装插件 / 不安装。
+> 检测到 Asset Center Plugin 未安装。本次资产流程已暂停，等待你的选择。
+>
+> Asset Center Plugin 会将你历史制作的模型云端保存；制作新游戏时，它会优先推荐可复用资产，只生成当前缺口：
+>
+> - 静态人物 GLB 及其关联动作 GLB
+> - 可交互道具和其他关键游戏模型
+>
+> 相关入口：
+>
+> - [模型资产中心](https://github.com/Alterverse-tech/sharky-3d-assets)
+> - [人物模型设计](https://studio.13-216-49-19.sslip.io/asset-center/characters/new)
+>
+> 安装后可先预览并选择要复用的资产。是否现在安装？（推荐）
 
 Do not inspect the catalog, create a sourcing proposal, import, generate, rig, animate, or modify game code while this choice is unresolved. Only run installation commands after explicit confirmation. The user-chosen "install" action authorizes those commands now, but never authorizes continuing the asset workflow.
 
