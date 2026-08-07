@@ -3,11 +3,11 @@
   <p>Generate, animate, reuse, and integrate production-ready GLB assets without leaving your coding workflow.</p>
   <p>
     <a href="https://studio.13-216-49-19.sslip.io/asset-center/"><img src="docs/img/button-open-asset-center.svg" alt="Open Asset Center" width="238"></a>
-    <a href="https://github.com/Alterverse-tech/sharky-3d-assets/blob/main/INSTALL.md"><img src="docs/img/button-use-in-codex.svg" alt="Use in Codex" width="238"></a>
-    <a href="https://www.skills.sh/alterverse-tech/sharky-3d-assets/shark-game-assets"><img src="docs/img/button-use-in-claude.svg" alt="Use in Claude" width="238"></a>
+    <a href="https://alterverse-tech.github.io/sharky-3d-assets/?agent=codex#install"><img src="docs/img/button-use-in-codex.svg" alt="Use in Codex" width="238"></a>
+    <a href="https://alterverse-tech.github.io/sharky-3d-assets/?agent=claude#install"><img src="docs/img/button-use-in-claude.svg" alt="Use in Claude" width="238"></a>
   </p>
-  <h3>Install with one prompt in Codex</h3>
-  <p>Paste the prompt below into any task in the Codex desktop app.</p>
+  <h3>Install with one prompt</h3>
+  <p>Choose Codex or Claude above to switch to the matching installation prompt.</p>
 </div>
 
 ```text

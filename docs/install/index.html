@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Install Shark Game Assets in Codex or Claude with one prompt."
+    />
+    <title>Install Shark Game Assets</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        color: #211307;
+        background: #fff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 72px 24px;
+      }
+
+      main {
+        width: min(1120px, 100%);
+        text-align: center;
+      }
+
+      h1 {
+        max-width: 980px;
+        margin: 0 auto;
+        font-size: clamp(56px, 8.2vw, 116px);
+        font-weight: 600;
+        letter-spacing: -0.075em;
+        line-height: 0.94;
+      }
+
+      .lead {
+        max-width: 960px;
+        margin: 40px auto 0;
+        color: #51463d;
+        font-size: clamp(20px, 2.4vw, 31px);
+        line-height: 1.45;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 14px;
+        margin: 48px 0 0;
+      }
+
+      .button {
+        min-height: 64px;
+        border: 1px solid #e4e1de;
+        border-radius: 10px;
+        padding: 0 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        color: #2f251e;
+        background: #f5f4f3;
+        box-shadow: 0 1px 4px rgb(33 19 7 / 8%);
+        font: inherit;
+        font-size: 21px;
+        font-weight: 650;
+        text-decoration: none;
+        cursor: pointer;
+        transition:
+          transform 150ms ease,
+          border-color 150ms ease,
+          background 150ms ease;
+      }
+
+      .button:hover {
+        transform: translateY(-1px);
+        border-color: #c8c1bb;
+      }
+
+      .button.primary {
+        border-color: #111;
+        color: #fff;
+        background: #111;
+      }
+
+      .button[aria-pressed="true"] {
+        border-color: #211307;
+        background: #fff;
+        box-shadow: 0 0 0 2px #211307;
+      }
+
+      .button.primary:hover {
+        background: #292929;
+      }
+
+      .icon {
+        font-size: 25px;
+        line-height: 1;
+      }
+
+      .claude-icon {
+        color: #da7756;
+      }
+
+      .prompt-panel {
+        margin-top: 52px;
+      }
+
+      .prompt-title {
+        margin: 0 0 20px;
+        font-size: clamp(18px, 2.1vw, 24px);
+        line-height: 1.35;
+      }
+
+      .prompt-box {
+        width: 100%;
+        min-height: 106px;
+        border: 1px solid #d9dadd;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 20px 20px 20px 28px;
+        text-align: left;
+        background: #f5f6f7;
+      }
+
+      code {
+        flex: 1;
+        overflow-wrap: anywhere;
+        color: #202124;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: clamp(15px, 1.8vw, 21px);
+        line-height: 1.55;
+      }
+
+      .copy {
+        width: 56px;
+        height: 56px;
+        flex: 0 0 auto;
+        border: 1px solid #dedede;
+        border-radius: 10px;
+        color: #626262;
+        background: #fff;
+        font-size: 25px;
+        cursor: pointer;
+      }
+
+      .copy:hover {
+        color: #111;
+        border-color: #aaa;
+      }
+
+      .copy:focus-visible,
+      .button:focus-visible {
+        outline: 3px solid #5d9cff;
+        outline-offset: 3px;
+      }
+
+      .copy-status {
+        min-height: 24px;
+        margin: 12px 0 0;
+        color: #5c5148;
+        font-size: 15px;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 44px 16px;
+        }
+
+        h1 {
+          letter-spacing: -0.06em;
+        }
+
+        .lead {
+          margin-top: 28px;
+        }
+
+        .actions {
+          margin-top: 36px;
+        }
+
+        .button {
+          width: 100%;
+        }
+
+        .prompt-panel {
+          margin-top: 40px;
+        }
+
+        .prompt-box {
+          align-items: flex-start;
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Your AI 3D Game Asset Assistant</h1>
+      <p class="lead">
+        Generate, animate, reuse, and integrate production-ready GLB assets
+        without leaving your coding workflow.
+      </p>
+
+      <div class="actions" aria-label="Choose where to use Shark Game Assets">
+        <a
+          class="button primary"
+          href="https://studio.13-216-49-19.sslip.io/asset-center/"
+        >
+          Open Asset Center <span aria-hidden="true">→</span>
+        </a>
+        <button class="button agent-button" type="button" data-agent="codex">
+          <span class="icon" aria-hidden="true">◎</span> Use in Codex
+        </button>
+        <button class="button agent-button" type="button" data-agent="claude">
+          <span class="icon claude-icon" aria-hidden="true">✳</span> Use in Claude
+        </button>
+      </div>
+
+      <section class="prompt-panel" id="install" aria-live="polite">
+        <h2 class="prompt-title" id="prompt-title"></h2>
+        <div class="prompt-box">
+          <code id="prompt"></code>
+          <button class="copy" type="button" aria-label="Copy install prompt" title="Copy">
+            ⧉
+          </button>
+        </div>
+        <p class="copy-status" id="copy-status" role="status"></p>
+      </section>
+    </main>
+
+    <script>
+      const states = {
+        codex: {
+          title: "Enter the prompt below into any task on your Codex desktop app",
+          prompt:
+            "/goal Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md to install the Shark Game Assets Skill and Asset Center Plugin, then set up a new task for me.",
+        },
+        claude: {
+          title: "Enter the prompt below into Claude Code",
+          prompt:
+            "/goal Read https://www.skills.sh/alterverse-tech/sharky-3d-assets/shark-game-assets to install and use the Shark Game Assets skill.",
+        },
+      };
+
+      const title = document.querySelector("#prompt-title");
+      const prompt = document.querySelector("#prompt");
+      const status = document.querySelector("#copy-status");
+      const agentButtons = [...document.querySelectorAll(".agent-button")];
+
+      function selectAgent(agent, updateUrl = true) {
+        const selected = states[agent] ? agent : "codex";
+        title.textContent = states[selected].title;
+        prompt.textContent = states[selected].prompt;
+        status.textContent = "";
+
+        agentButtons.forEach((button) => {
+          button.setAttribute(
+            "aria-pressed",
+            String(button.dataset.agent === selected),
+          );
+        });
+
+        if (updateUrl) {
+          const url = new URL(window.location.href);
+          url.searchParams.set("agent", selected);
+          history.replaceState(null, "", url);
+        }
+      }
+
+      agentButtons.forEach((button) => {
+        button.addEventListener("click", () => selectAgent(button.dataset.agent));
+      });
+
+      document.querySelector(".copy").addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(prompt.textContent);
+          status.textContent = "Copied to clipboard.";
+        } catch {
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(prompt);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          status.textContent = "Prompt selected. Press Ctrl/Cmd+C to copy.";
+        }
+      });
+
+      const requestedAgent = new URLSearchParams(window.location.search).get("agent");
+      selectAgent(requestedAgent, false);
+    </script>
+  </body>
+</html>
