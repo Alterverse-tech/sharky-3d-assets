@@ -54,6 +54,18 @@ Ready-to-use GLB files are added to your project
 
 ## Installation
 
+### Install with one prompt in Codex
+
+Paste this into any Codex task:
+
+```text
+Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md and install Shark Game Assets for me.
+```
+
+Codex checks what is already installed, adds only the missing Skill or Plugin components, verifies both results, and asks you to start a new task.
+
+### Manual installation
+
 Install the skill globally using the [Skills CLI](https://skills.sh):
 
 ```
