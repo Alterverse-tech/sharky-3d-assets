@@ -17,6 +17,7 @@ export function buildSourcingProposal(args, catalog) {
   const slots = args.requirements.map((requirement, index) => {
     assertObject(requirement, `requirements[${index}]`);
     const slotId = requireText(requirement.slotId, `requirements[${index}].slotId`);
+    const name = requireText(requirement.need, `${slotId}.need`);
     if (seenSlots.has(slotId)) throw new Error(`duplicate slotId: ${slotId}`);
     seenSlots.add(slotId);
 
@@ -79,7 +80,8 @@ export function buildSourcingProposal(args, catalog) {
 
     return {
       id: slotId,
-      name: requireText(requirement.need, `${slotId}.need`),
+      name,
+      entityLabel: compactEntityLabel(requirement.entityLabel, name),
       role: requireText(requirement.role, `${slotId}.role`),
       assetKind: requireText(requirement.assetKind, `${slotId}.assetKind`),
       tier: requireText(requirement.tier ?? "key", `${slotId}.tier`),
@@ -122,6 +124,7 @@ export function normalizeConfirmedSourcingPlan(proposal, uiState, confirmedAt = 
     return {
       id: slot.id,
       name: slot.name,
+      entityLabel: compactEntityLabel(slot.entityLabel, slot.name),
       role: slot.role,
       assetKind: slot.assetKind,
       tier: slot.tier,
@@ -388,6 +391,13 @@ function requireText(value, name) {
 
 function textOrUndefined(value) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function compactEntityLabel(value, fallback) {
+  const raw = textOrUndefined(value) ?? requireText(fallback, "entity label");
+  const concise = raw.split(/[，,；;。:：\n]/, 1)[0].trim() || raw;
+  const characters = Array.from(concise);
+  return characters.length <= 16 ? concise : `${characters.slice(0, 15).join("")}…`;
 }
 
 function assertObject(value, name) {

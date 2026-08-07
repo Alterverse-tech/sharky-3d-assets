@@ -9,7 +9,7 @@ import { sourcingBoardHtml } from "./sourcing-board-resource.mjs";
 import { buildSourcingProposal, normalizeConfirmedSourcingPlan } from "./sourcing-contract.mjs";
 
 const SERVER_NAME = "asset-center-personal-assets";
-const SERVER_VERSION = "0.4.6";
+const SERVER_VERSION = "0.4.7";
 const PROTOCOL_VERSION = "2024-11-05";
 const DEFAULT_API_BASE_URL = "https://studio.13-216-49-19.sslip.io/codex/v1";
 const DEFAULT_TARGET_DIRECTORY = "public/assets/asset-center";
@@ -17,7 +17,7 @@ const LOCK_SCHEMA = "shark.asset-center-lock/v1";
 const ASSET_SCHEMA = "shark.asset-center-import/v1";
 const MAX_GLB_BYTES = 512 * 1024 * 1024;
 
-const SOURCING_BOARD_URI = "ui://asset-center-personal-assets/sourcing-board-v4.html";
+const SOURCING_BOARD_URI = "ui://asset-center-personal-assets/sourcing-board-v5.html";
 
 const tools = [
   {
@@ -34,6 +34,7 @@ const tools = [
             type: "object",
             properties: {
               need: { type: "string", minLength: 1, maxLength: 120 },
+              entityLabel: { type: "string", minLength: 1, maxLength: 40, description: "Concise 角色/实体 label. Use a short noun phrase such as 双人滑雪选手; do not append tier values such as key." },
               slotId: { type: "string", minLength: 1, maxLength: 120 },
               role: { type: "string", minLength: 1, maxLength: 80 },
               assetKind: { type: "string", minLength: 1, maxLength: 80 },

@@ -1,14 +1,15 @@
 import "./styles.css";
 
 import { createRoot } from "react-dom/client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   callTool,
   currentDisplayMode,
-  openHostLink,
+  openExternalLink,
   publishConfirmedPlan,
   requestAssetCatalogRefresh,
+  requestCodexPreview,
   requestDisplayMode,
   restoredWidgetState,
   saveWidgetState,
@@ -65,7 +66,10 @@ function safePreviewUrl(value?: string) {
 }
 
 function entityLabel(slot: any) {
-  return slot.tier ? `${slot.name}（${slot.tier}）` : slot.name;
+  const raw = String(slot.entityLabel ?? slot.name ?? slot.id ?? "资产").trim();
+  const concise = raw.split(/[，,；;。:：\n]/, 1)[0].trim() || raw;
+  const characters = Array.from(concise);
+  return characters.length <= 16 ? concise : `${characters.slice(0, 15).join("")}…`;
 }
 
 function optionLabel(index: number) {
@@ -78,6 +82,65 @@ function FormattedText({ value }: { value: string }) {
       ? <code key={index}>{part.slice(1, -1)}</code>
       : <span key={index}>{part}</span>,
   )}</>;
+}
+
+function PreviewChoice({ href, label }: { href: string; label: string }) {
+  const [open, setOpen] = useState(false);
+  const container = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (!container.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <span className="preview-choice" ref={container}>
+      <button
+        type="button"
+        className="preview-trigger"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <FormattedText value={label} /><span aria-hidden="true">↗</span>
+      </button>
+      {open ? (
+        <span className="preview-menu" role="menu">
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              void requestCodexPreview(href, label.replaceAll("`", ""));
+            }}
+          >
+            在 Codex 中打开
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              void openExternalLink(href);
+            }}
+          >
+            在系统浏览器打开
+          </button>
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 function preferredModel(slot: any) {
@@ -326,7 +389,7 @@ function RequirementRows({
     const selected = row.value === selectedValue;
     return (
       <tr data-selected={selected || undefined} data-disabled={row.disabled || undefined} key={row.key}>
-        <th className="entity-cell" scope="row">{index === 0 ? entity : "〃"}</th>
+        <th className="entity-cell" scope="row">{index === 0 ? <span className="entity-label">{entity}</span> : "〃"}</th>
         <td>{requirement}</td>
         <td className="option-cell">{optionLabel(index)}</td>
         <td className="selection-cell">
@@ -343,17 +406,7 @@ function RequirementRows({
         </td>
         <td className="candidate-cell">
           {row.previewUrl ? (
-            <a
-              href={row.previewUrl}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(event) => {
-                event.preventDefault();
-                void openHostLink(row.previewUrl!);
-              }}
-            >
-              <FormattedText value={row.candidate} /><span aria-hidden="true">↗</span>
-            </a>
+            <PreviewChoice href={row.previewUrl} label={row.candidate} />
           ) : <FormattedText value={row.candidate} />}
         </td>
         <td>{row.modelSource}</td>

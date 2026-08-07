@@ -98,24 +98,33 @@ export async function requestDisplayMode(mode: DisplayMode): Promise<DisplayMode
   return result?.mode ?? mode;
 }
 
-export async function openHostLink(href: string) {
-  try {
-    const result = await request("ui/open-link", { url: href });
-    if (!result?.isError) return;
-  } catch {
-    // Older hosts may only expose the OpenAI compatibility bridge.
-  }
-
+export async function openExternalLink(href: string) {
   if (window.openai?.openExternal) {
     try {
       await window.openai.openExternal({ href, redirectUrl: false });
       return;
     } catch {
-      // Fall through when a host exposes the extension but declines this URL.
+      // Fall through to the standard MCP Apps request.
     }
+  }
+
+  try {
+    const result = await request("ui/open-link", { url: href });
+    if (!result?.isError) return;
+  } catch {
+    // Older hosts may only support window.open.
   }
   const opened = window.open(href, "_blank", "noopener,noreferrer");
   if (opened) opened.opener = null;
+}
+
+export async function requestCodexPreview(href: string, label: string) {
+  const prompt = `请使用 Codex 内置浏览器打开并预览 Asset Center 资产“${label}”：${href}\n这次只预览，不要导入或修改项目文件。`;
+  if (window.openai?.sendFollowUpMessage) {
+    await window.openai.sendFollowUpMessage({ prompt, scrollToBottom: true });
+    return;
+  }
+  post("ui/message", { content: [{ type: "text", text: prompt }] });
 }
 
 export function publishConfirmedPlan(plan: any) {

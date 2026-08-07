@@ -50,6 +50,7 @@ assert.equal(validate({ ...sample, confirmation: { ...sample.confirmation, confi
     gameSummary: "Two-player airplane obstacle race",
     requirements: [{
       slotId: "runner",
+      entityLabel: "双人滑雪选手",
       need: "Shared runner",
       role: "player",
       assetKind: "character",
@@ -61,11 +62,13 @@ assert.equal(validate({ ...sample, confirmation: { ...sample.confirmation, confi
     gameSummary: "Two-player airplane obstacle race",
     slots: [{ id: "runner", role: "player", assetKind: "character", actions: ["jump"] }],
   });
+  assert.equal(proposal.slots[0].entityLabel, "双人滑雪选手", "proposal must preserve the concise entity label");
 
   const plan = normalizeConfirmedSourcingPlan(proposal, {
     slots: { runner: { model: { source: "generate_new" }, actions: { jump: { source: "runtime_procedural" } } } },
   }, "2026-08-07T00:00:00.000Z");
   assert.deepEqual(plan.intentSnapshot, proposal.intentSnapshot, "frozen plan must preserve the proposal intent snapshot");
+  assert.equal(plan.slots[0].entityLabel, "双人滑雪选手", "confirmed plan must preserve the concise entity label");
 }
 
 {
