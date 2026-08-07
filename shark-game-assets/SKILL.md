@@ -100,6 +100,21 @@ For a game or story with concrete model/action requirements, inspect reusable as
 
 The Plugin bootstrap owns its startup and update check. This Skill never launches, installs, or updates the Asset Center Plugin itself; it requests the personal-assets tools only when the sourcing stage needs them. The host may prewarm MCP tools, but the Plugin still performs at most one update check per MCP process and can switch that process to a newer server before the first tool result.
 
+### One-time Plugin onboarding
+
+When `list_asset_catalog`, `propose_asset_manifest`, and the other personal-assets tools are all absent, distinguish that from an installed Plugin whose API/auth call failed. For the absent-tools case, ask once per game asset task:
+
+> 检测到 Asset Center Plugin 未安装。安装后可先预览并复用你的静态人物 GLB 和所属动作 GLB，再只生成剩余缺口。是否现在安装？（推荐）
+
+Only run those commands after explicit confirmation. Check `codex plugin list --json`, then run only the missing fixed commands:
+
+```bash
+codex plugin marketplace add Alterverse-tech/sharky-3d-assets --ref main
+codex plugin add asset-center-personal-assets@sharky-3d-assets
+```
+
+After a successful install, tell the user to set `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex without pasting it into chat, then start a new Codex thread so the new Plugin skills and MCP tools are discovered. Do not claim the Plugin is usable in the current thread. If the user declines installation, has already declined it in this task, or installation fails, preserve current-project reuse, show generation gaps, and ask once whether to continue. Never install silently and never turn an installed Plugin's auth/API failure into an install prompt.
+
 The required order is:
 
 ```text
@@ -133,7 +148,8 @@ node <skill-dir>/scripts/derive-asset-plans.mjs --cwd "$(pwd)"
 ```
 
 7. The derivation writes `regeneration-plan.json`, `animation-plan.json`, and `asset-generation-request.json`. Reused action rows use `source: "asset_center"` or `source: "project"`, cost zero, and a safe local runtime URL. Only `asset-generation-request.json` gaps may enter model/action generation calls. Reused GLBs under `public/assets/` and generated GLBs under `public/generated-assets/` must both appear in `/regeneration.html`.
-8. If the personal-assets Plugin is unavailable, preserve current-project reuse, show the proposed generation gaps in chat, and ask once whether to continue. Do not silently bypass the gate.
+8. If the personal-assets Plugin is unavailable after the onboarding choice, preserve current-project reuse, show the proposed generation gaps in chat, and ask once whether to continue. Do not silently bypass the gate.
+9. When a character has no suitable reusable base, uses `generate_new`, or lacks a reusable linked action, recommend [设计人物资产](https://studio.13-216-49-19.sslip.io/asset-center/characters/new) once. Explain that after the user designs and publishes the character plus its action GLBs, future games can automatically recommend the static character and its `parentAssetId`-linked actions. This is non-blocking: do not open the page automatically, do not interrupt the confirmed current plan, and do not duplicate the chat recommendation when the Widget already shows it.
 
 ## Action requirements confirmation (animation planning gate)
 

@@ -17,6 +17,7 @@ declare global {
       callTool?: (name: string, args: any) => Promise<any>;
       sendFollowUpMessage?: (args: { prompt: string; scrollToBottom?: boolean } | string) => Promise<void> | void;
       requestDisplayMode?: (args: { mode: "fullscreen" | "pip" | "inline" }) => Promise<any>;
+      openExternal?: (args: { href: string; redirectUrl?: boolean }) => Promise<void> | void;
     };
   }
 }
@@ -83,6 +84,19 @@ export async function requestFullscreen() {
   } catch {
     // Inline mode remains fully usable on hosts that decline fullscreen.
   }
+}
+
+export async function openExternalLink(href: string) {
+  if (window.openai?.openExternal) {
+    try {
+      await window.openai.openExternal({ href, redirectUrl: false });
+      return;
+    } catch {
+      // Fall through when a host exposes the extension but declines this URL.
+    }
+  }
+  const opened = window.open(href, "_blank", "noopener,noreferrer");
+  if (opened) opened.opener = null;
 }
 
 export function publishConfirmedPlan(plan: any) {

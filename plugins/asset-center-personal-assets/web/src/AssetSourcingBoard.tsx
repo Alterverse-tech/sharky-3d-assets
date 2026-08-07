@@ -8,12 +8,15 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   callTool,
+  openExternalLink,
   publishConfirmedPlan,
   requestFullscreen,
   restoredWidgetState,
   saveWidgetState,
   subscribeToolOutput,
 } from "./bridge";
+
+const CHARACTER_DESIGNER_URL = "https://studio.13-216-49-19.sslip.io/asset-center/characters/new";
 
 type Asset = {
   id: string;
@@ -96,6 +99,15 @@ function candidateMeta(entry: Asset) {
   return [entry.classification, entry.animations?.slice(0, 2).join("/"), entry.sizeBytes ? `${(entry.sizeBytes / 1_000_000).toFixed(1)} MB` : null].filter(Boolean).join(" · ");
 }
 
+function shouldRecommendCharacterDesign(slot: any, selected: any) {
+  if (String(slot.assetKind ?? "").toLowerCase() !== "character") return false;
+  const hasReusableModel = Boolean(slot.model.projectCandidates?.length || modelAssets(slot).length);
+  const missingLinkedAction = slot.actions?.some((action: any) =>
+    !(action.candidates ?? []).some((entry: Asset) => entry.parentAssetId === selected.model.assetId),
+  );
+  return !hasReusableModel || selected.model.source === "generate_new" || Boolean(missingLinkedAction);
+}
+
 function CandidateRow({ entry, selected, onFocus }: { entry: Asset; selected: boolean; onFocus: () => void }) {
   return (
     <span className="candidate-row" data-selected={selected} onMouseEnter={onFocus} onClick={onFocus}>
@@ -138,6 +150,7 @@ export function AssetSourcingBoard() {
   }, [activeSlot, focused]);
 
   if (!proposal || !choices || !activeSlot || !selected || !summary) return <div className="loading">等待资产方案…</div>;
+  const recommendCharacterDesign = shouldRecommendCharacterDesign(activeSlot, selected);
 
   const updateModel = (value: string) => {
     const model = parseModelValue(value);
@@ -195,6 +208,7 @@ export function AssetSourcingBoard() {
             <RadioGroup.Item block value="generate_new">生成新模型</RadioGroup.Item>
             <RadioGroup.Item block value="primitive_fallback">Primitive 兜底</RadioGroup.Item>
           </RadioGroup>
+          {recommendCharacterDesign ? <aside className="character-design-cta"><div><strong>为以后积累可复用人物与动作</strong><p>在资产中心设计并发布人物模型及动作 GLB，后续游戏可自动推荐同一人物的静态模型和关联动作。</p></div><Button color="secondary" variant="soft" onClick={() => void openExternalLink(CHARACTER_DESIGNER_URL)}>设计人物资产</Button></aside> : null}
           <div className="actions">
             {activeSlot.actions.map((action: any) => {
               const linked = action.candidates?.filter((entry: Asset) => entry.parentAssetId === selected.model.assetId) ?? [];

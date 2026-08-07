@@ -74,6 +74,10 @@ codex plugin add asset-center-personal-assets@sharky-3d-assets
 
 Set `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex. The Plugin is independent, but when `shark-game-assets` reaches its reuse-before-generation sourcing stage, the personal-assets tools and native selection board become the default reuse path.
 
+Existing users who installed only the Skill receive a one-time Plugin recommendation when a game first reaches asset sourcing. Installation is never silent: Codex waits for confirmation, runs only missing commands, and asks the user to start a new thread before using the newly installed tools.
+
+When no suitable character or linked action is available, choose **[设计人物资产](https://studio.13-216-49-19.sslip.io/asset-center/characters/new)**. After publishing the character and its action GLBs, later game tasks can recommend the reusable static model together with its linked actions.
+
 ## Public Access
 
 Shark Game Assets uses a public remote asset-generation service. Users can generate assets from Codex, Claude Code, other compatible clients, or direct CLI installs without creating an account or configuring a token.

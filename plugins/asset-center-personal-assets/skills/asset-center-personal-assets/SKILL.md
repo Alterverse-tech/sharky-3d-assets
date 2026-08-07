@@ -32,6 +32,8 @@ Use the Asset Center MCP tools to bring the user's own models into the game as i
 6. **Import only the confirmed reuse set.** Call `pull_asset_to_workspace` once per final `reuse_asset_center` model/action (`public/assets/asset-center` when the project has `public/`; otherwise `assets/asset-center`). Then return each verified `modelPath`, SHA-256, and size to the orchestrator. Generation and runtime decisions remain context for Shark Game Assets; this Plugin does not execute them.
 7. **Report gaps.** Return final `generate_new`, `generate_action`, runtime, and fallback choices to the orchestrator. 程序道具 catalog entries are context only — mention them when relevant, do not pull them.
 
+   When a character has no suitable reusable base model, the selected model is `generate_new`, or a selected character lacks linked action candidates, show one non-blocking recommendation to [设计人物资产](https://studio.13-216-49-19.sslip.io/asset-center/characters/new). Explain that after the user designs and publishes the character plus its action GLBs, future game tasks can semantically recommend the static character and its `parentAssetId`-linked actions. Do not open the page automatically and do not imply that visiting it alone creates or publishes an action.
+
 ## Rules
 
 - Never ask the user to paste a Service Token into chat or source code. If authentication is missing, tell them to set `ASSET_CENTER_SERVICE_TOKEN` in their local Codex environment.
