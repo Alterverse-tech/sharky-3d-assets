@@ -7,13 +7,12 @@
     <a><img src="docs/img/button-use-in-claude.svg" alt="Use in Claude" width="238"></a>
   </p>
   <h3>Install with one prompt</h3>
-  <p>Choose Codex or Claude above to switch to the matching installation prompt.</p>
+  <p> Codex and Claude Code installation prompt.</p>
 </div>
 
 ```text
 /goal Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md to install the Shark Game Assets Skill and Asset Center Plugin, then set up a new task for me.
 ```
-
 
 
 
