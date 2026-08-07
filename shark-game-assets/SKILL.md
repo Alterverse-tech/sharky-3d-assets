@@ -122,7 +122,7 @@ extract model/action requirements
 → inspect current project imports
 → list Asset Center catalog once
 → build sourcing proposal
-→ render fullscreen progressive sourcing board
+→ render business sourcing table
 → wait for one final confirmation
 → write and validate asset-sourcing-plan.json
 → pull only selected reuse_asset_center items
@@ -132,7 +132,7 @@ extract model/action requirements
 
 1. Extract the key model slots and every semantic action with its triggering scene. Inspect `asset_manifest.json`, `asset-center.lock.json`, and loadable local GLBs before querying remote inventory.
 2. If `list_asset_catalog` is available, call it once for the sourcing pass. Match the complete returned catalog; do not issue one search per slot. If the tool is absent or the call fails, report `库存查询失败/暂不可用`. A failed query is not an empty library and must never be described as “没有资产”.
-3. Call `propose_asset_manifest` with the model/action requirements and model-selected recommendation evidence. Pass the returned `shark-asset-sourcing-proposal` to `render_asset_sourcing_board`. The fullscreen MCP App is the primary interaction; the markdown table is the fallback in hosts without MCP Apps.
+3. Call `propose_asset_manifest` with the model/action requirements and model-selected recommendation evidence. Pass the returned `shark-asset-sourcing-proposal` to `render_asset_sourcing_board`. The MCP App's primary interaction is a compact selection table with 角色/实体、模型来源、动作、触发场景、动作来源 columns and clickable HTTP preview names; the markdown table is the fallback in hosts without MCP Apps.
 4. The user may change every base model and nested action. A base change invalidates linked actions from the previous parent. `reuse_compatible_action` is selectable only with verified compatibility. Wait for the single `确认资产方案并开始制作` action; do not import, generate, rig, animate, or modify game code before it.
 5. Save the confirmed result as `asset-sourcing-plan.json`, then validate it:
 

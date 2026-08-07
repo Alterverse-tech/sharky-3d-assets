@@ -12,11 +12,9 @@ declare global {
     openai?: {
       toolOutput?: any;
       widgetState?: any;
-      displayMode?: string;
       setWidgetState?: (state: any) => void;
       callTool?: (name: string, args: any) => Promise<any>;
       sendFollowUpMessage?: (args: { prompt: string; scrollToBottom?: boolean } | string) => Promise<void> | void;
-      requestDisplayMode?: (args: { mode: "fullscreen" | "pip" | "inline" }) => Promise<any>;
       openExternal?: (args: { href: string; redirectUrl?: boolean }) => Promise<void> | void;
     };
   }
@@ -75,15 +73,6 @@ export function saveWidgetState(state: any) {
 
 export function restoredWidgetState() {
   return window.openai?.widgetState;
-}
-
-export async function requestFullscreen() {
-  if (!window.openai?.requestDisplayMode || window.openai.displayMode === "fullscreen") return;
-  try {
-    await window.openai.requestDisplayMode({ mode: "fullscreen" });
-  } catch {
-    // Inline mode remains fully usable on hosts that decline fullscreen.
-  }
 }
 
 export async function openExternalLink(href: string) {

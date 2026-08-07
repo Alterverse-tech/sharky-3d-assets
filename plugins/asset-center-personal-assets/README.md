@@ -2,7 +2,7 @@
 
 This plugin lets Codex read the current Asset Center owner's complete library in grouped Static GLB, Action GLB, and Procedural Prop sections, show candidates for selection, and import verified local GLB copies into a game workspace.
 
-Version `0.4.3` makes the fullscreen MCP App sourcing board the primary story-driven experience. It opens fullscreen for multi-asset plans, uses a clearer three-column decision layout, keeps the right inspector useful for both reusable and not-yet-generated assets, and preserves one final sticky confirmation. It also keeps the contextual character-authoring recommendation introduced in `0.4.2`, so users can explicitly open Asset Center's character designer when a reusable character or linked action is missing. Proposal data, Widget rendering, and confirmation remain separate tools so non-App clients retain a structured fallback.
+Version `0.4.4` replaces the fullscreen three-column board with a compact business selection table. Its fixed columns are 角色/实体、模型来源、动作、触发场景、动作来源; model and action alternatives use single-choice checkboxes, and reusable asset names open their HTTP preview pages. The Widget no longer embeds preview iframes or requests fullscreen. One final sticky confirmation remains, while proposal data, rendering, and confirmation stay separate so non-App clients retain the same structured fallback.
 
 ## Configure
 
@@ -54,7 +54,7 @@ The importer validates byte size, SHA-256, and the GLB header. Repeating the sam
 
 - `list_asset_catalog`: read the complete library grouped as 静态 GLB → 动作 GLB → 程序道具, including classification, description, animations, size, and base/action relationships.
 - `propose_asset_manifest`: read one catalog snapshot and build a data-only legacy manifest or progressive sourcing proposal.
-- `render_asset_sourcing_board`: render a prepared proposal in the fullscreen Apps SDK UI Widget; it never reads the catalog again.
+- `render_asset_sourcing_board`: render a prepared proposal as the compact Apps SDK UI selection table; it never reads the catalog again.
 - `confirm_asset_sourcing_plan`: validate and freeze the one final confirmation; it does not import or generate.
 - `search_personal_assets`: search and paginate the owner's GLBs.
 - `get_personal_asset`: read metadata and the stable preview page URL.

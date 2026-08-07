@@ -19,13 +19,13 @@ Use the Asset Center MCP tools to bring the user's own models into the game as i
 2. **Read the library once.** Call `list_asset_catalog`. The response is grouped in this fixed order: 静态 GLB → 动作 GLB → 程序道具. Each entry carries life `classification` (人物、人物动作、汽车、飞机、轮船、球类等), semantic `tags`, `description`, `animations`, and `sizeBytes`. A rigged character root remains a 静态 GLB; each independent action GLB is a separate 动作 GLB linked by `parentAssetId`. Match entries to requirements **semantically in-context** — synonyms, 中英互通, style hints. Do not fire many keyword searches.
 3. **Build the sourcing proposal.** Call `propose_asset_manifest` with the model/action requirements, default source, recommendations, alternatives, reasons, confidence, and action scenes. It is a data tool: it fetches the catalog exactly once and returns either the legacy manifest shape or `shark-asset-sourcing-proposal`. A catalog query failed result must be reported as `query failed / 库存查询失败或暂不可用`; never turn an API/auth failure into “no assets”.
 
-4. **Render one progressive board.** Pass the complete proposal to `render_asset_sourcing_board`. In MCP-Apps-capable hosts this opens a native-feeling fullscreen Widget built with Apps SDK UI. The board shows project reuse, Asset Center recommendations/alternatives, generation, runtime, and fallback choices. Each character's actions are nested under its selected static GLB. Candidate rows use thumbnails and one focused 3D inspector; they do not mount one preview iframe per asset. In plain hosts, render the same structured proposal as a markdown table:
+4. **Render one selection table.** Pass the complete proposal to `render_asset_sourcing_board`. In MCP-Apps-capable hosts this opens a compact Widget with the fixed business columns 角色/实体、模型来源、动作、触发场景、动作来源. Model and action alternatives use single-choice checkboxes. Any reusable candidate name with a safe HTTP/HTTPS `previewUrl` is clickable and opens that external preview page; the Widget does not embed preview iframes or request fullscreen. In plain hosts, render the same structured proposal as a markdown table:
 
-   | 游戏需求 | 推荐资产 | 类别 | 分类 | 描述 | 动画 | 大小 | 状态 |
-   |---|---|---|---|---|---|---|---|
-   | 主角骑士 | Rusty Knight | 静态 GLB | 人物 | 可复用骑士基础模型 | walk, attack | 12MB | ✅ 推荐 |
-   | 城堡场景 | Castle Gate | 静态 GLB | 建筑 | 石制城堡大门 | – | 55MB | ◻ 备选（偏大） |
-   | 巨龙 Boss | — | – | – | – | – | – | ❌ 缺失 → 建议去资产中心生成 |
+   | 角色/实体 | 模型来源 | 动作 | 触发场景 | 动作来源 |
+   |---|---|---|---|---|
+   | 主角骑士（key） | [Rusty Knight](https://example.invalid/preview) · Asset Center | walk | 第三人称移动探索 | 关联动作 GLB |
+   | 主角骑士（key） | 同上 | idle | 停止移动时 | 运行时程序动画 |
+   | 巨龙 Boss（key） | 新生成 · Gemini Reference → Tripo | attack | 玩家进入巢穴 | `preset:biped:attack` |
 
    Default recommendation = the best match per requirement; list runners-up as 备选. A static character GLB remains useful even when no action GLB matches, because the user may choose a supported generated-action route or runtime action.
 5. **Wait for one final confirmation.** The only primary action is `确认资产方案并开始制作`. The Widget calls `confirm_asset_sourcing_plan`, which validates and freezes the complete choice set but does not import or generate. In plain hosts, obtain the same one final confirmation in chat. Never import before this confirmation.
