@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import {
   callTool,
   currentDisplayMode,
-  openHostLink,
   publishConfirmedPlan,
   requestAssetCatalogRefresh,
   requestDisplayMode,
@@ -347,10 +346,6 @@ function RequirementRows({
               href={row.previewUrl}
               target="_blank"
               rel="noreferrer"
-              onClick={(event) => {
-                event.preventDefault();
-                void openHostLink(row.previewUrl!);
-              }}
             >
               <FormattedText value={row.candidate} /><span aria-hidden="true">↗</span>
             </a>

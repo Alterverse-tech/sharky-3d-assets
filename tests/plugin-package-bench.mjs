@@ -26,11 +26,11 @@ assert.match(widget, /退出全屏/);
 assert.match(widget, /刷新资产/);
 assert.match(widget, /<th>选项<\/th>\s*<th>当前选择<\/th>\s*<th>候选方案（点击预览）<\/th>/);
 assert.match(widget, /<td className="option-cell">[\s\S]*?<td className="selection-cell">[\s\S]*?<td className="candidate-cell">/);
-assert.match(bridge, /ui\/open-link/);
 assert.match(bridge, /ui\/request-display-mode/);
-assert.match(bridge, /openExternal/);
-assert.match(bridge, /redirectUrl: false/);
-assert.match(bundle, /ui\/open-link/);
+assert.match(widget, /href=\{row\.previewUrl\}\s*target="_blank"\s*rel="noreferrer"/);
+assert.doesNotMatch(widget, /openHostLink|event\.preventDefault\(\)/);
+assert.doesNotMatch(bridge, /openHostLink|ui\/open-link|openExternal/);
+assert.doesNotMatch(bundle, /ui\/open-link|openExternal/);
 assert.match(bundle, /ui\/request-display-mode/);
 
 process.stdout.write("plugin package bench passed\n");

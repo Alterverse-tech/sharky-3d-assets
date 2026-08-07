@@ -17,7 +17,6 @@ declare global {
       callTool?: (name: string, args: any) => Promise<any>;
       sendFollowUpMessage?: (args: { prompt: string; scrollToBottom?: boolean } | string) => Promise<void> | void;
       requestDisplayMode?: (args: { mode: DisplayMode }) => Promise<{ mode?: DisplayMode }>;
-      openExternal?: (args: { href: string; redirectUrl?: boolean }) => Promise<void> | void;
     };
   }
 }
@@ -96,26 +95,6 @@ export async function requestDisplayMode(mode: DisplayMode): Promise<DisplayMode
 
   const result = await request("ui/request-display-mode", { mode });
   return result?.mode ?? mode;
-}
-
-export async function openHostLink(href: string) {
-  try {
-    const result = await request("ui/open-link", { url: href });
-    if (!result?.isError) return;
-  } catch {
-    // Older hosts may only expose the OpenAI compatibility bridge.
-  }
-
-  if (window.openai?.openExternal) {
-    try {
-      await window.openai.openExternal({ href, redirectUrl: false });
-      return;
-    } catch {
-      // Fall through when a host exposes the extension but declines this URL.
-    }
-  }
-  const opened = window.open(href, "_blank", "noopener,noreferrer");
-  if (opened) opened.opener = null;
 }
 
 export function publishConfirmedPlan(plan: any) {
