@@ -5,12 +5,16 @@ import { useEffect, useState } from "react";
 
 import {
   callTool,
-  openExternalLink,
+  currentDisplayMode,
+  openHostLink,
   publishConfirmedPlan,
+  requestAssetCatalogRefresh,
+  requestDisplayMode,
   restoredWidgetState,
   saveWidgetState,
   subscribeToolOutput,
 } from "./bridge";
+import type { DisplayMode } from "./bridge";
 
 type Asset = {
   id: string;
@@ -98,7 +102,9 @@ function defaultActionChoice(action: any, model: any) {
   }
   if (action.defaultSource === "generate_action") {
     const reused = model.source === "reuse_asset_center" || model.source === "reuse_project";
-    if (!reused || action.generationRoute?.supportedForReusedBase) return { source: "generate_action" };
+    if (model.source === "generate_new" || (reused && action.generationRoute?.supportedForReusedBase)) {
+      return { source: "generate_action" };
+    }
   }
   if (action.defaultSource === "primitive_fallback") return { source: "primitive_fallback" };
   return { source: "runtime_procedural" };
@@ -166,7 +172,7 @@ function modelRows(slot: any): ChoiceRow[] {
     action: "—",
     scene: modelScene(slot),
     actionSource: "—",
-    reuseStatus: slot.model.fallbackReuseStatus ?? "加载失败兜底",
+    reuseStatus: "—",
   };
 
   const reuse = [...project, ...center];
@@ -177,7 +183,12 @@ function modelRows(slot: any): ChoiceRow[] {
   return ordered.map((row) => ({ ...row, recommended: row.value === selectedDefault }));
 }
 
-function actionRequirement(action: any) {
+function assetSubject(slot: any) {
+  return slot.assetKind === "character" || slot.assetKind === "creature" ? "人物/主体" : "道具";
+}
+
+function actionRequirement(slot: any, action: any) {
+  if (assetSubject(slot) === "道具") return "道具动作";
   if (action.requirement) return action.requirement;
   const name = String(action.name).toLowerCase();
   if (name === "idle") return "待机动作";
@@ -194,23 +205,58 @@ function runtimeCandidate(action: any) {
   return "运行时整体移动与轻微摆动";
 }
 
+function staticModelSourceForAction(slot: any, selectedModel: any) {
+  const subject = assetSubject(slot);
+  if (selectedModel.source === "reuse_asset_center") return `Asset Center 已有${subject}静态 GLB`;
+  if (selectedModel.source === "reuse_project") return `当前项目已有${subject}静态 GLB`;
+  if (selectedModel.source === "generate_new") return `新生成${subject}静态 GLB`;
+  return "Three.js 程序模型";
+}
+
+function generatedActionLabel(slot: any, action: any, selectedModel: any) {
+  const name = `\`${action.name}\``;
+  if (selectedModel.source === "reuse_asset_center") {
+    return `Asset Center 静态 GLB → Tripo 新生成 ${name} 动作 GLB`;
+  }
+  if (selectedModel.source === "reuse_project") {
+    return `当前项目静态 GLB → Tripo 新生成 ${name} 动作 GLB`;
+  }
+  return `新生成${assetSubject(slot)}静态 GLB → 新生成 ${name} 动作 GLB`;
+}
+
+function generatedActionSource(selectedModel: any) {
+  if (selectedModel.source === "reuse_asset_center") return "Tripo 重定向 · Asset Center 静态 GLB → 新动作 GLB";
+  if (selectedModel.source === "reuse_project") return "Tripo 重定向 · 当前项目静态 GLB → 新动作 GLB";
+  return "Tripo 重定向 · 新静态 GLB → 新动作 GLB";
+}
+
+function generatedActionReuseStatus(slot: any, selectedModel: any) {
+  const subject = assetSubject(slot);
+  if (selectedModel.source === "reuse_asset_center" || selectedModel.source === "reuse_project") {
+    return `复用${subject}静态 GLB，新生成动作 GLB`;
+  }
+  return `新${subject}与新动作成套生成`;
+}
+
 function actionRows(slot: any, action: any, selectedModel: any): ChoiceRow[] {
   const currentDefault = defaultActionChoice(action, selectedModel);
   const defaultValue = modelValue(currentDefault);
   const reusedBase = selectedModel.source === "reuse_asset_center" || selectedModel.source === "reuse_project";
+  const canGenerateAction = selectedModel.source === "generate_new"
+    || (reusedBase && action.generationRoute?.supportedForReusedBase);
   const rows: ChoiceRow[] = [];
 
   if (action.generator && action.preset) {
     rows.push({
       key: "generate_action",
       value: "generate_action",
-      candidate: action.generatedLabel ?? `生成 \`${action.name}\` 动作 GLB`,
-      modelSource: action.generatedModelSource ?? `沿用已选${slot.name}本体`,
+      candidate: generatedActionLabel(slot, action, selectedModel),
+      modelSource: staticModelSourceForAction(slot, selectedModel),
       action: action.name,
       scene: action.scene,
-      actionSource: `\`${action.preset}\``,
-      reuseStatus: action.generatedReuseStatus ?? "与新本体共用骨骼",
-      disabled: reusedBase && !action.generationRoute?.supportedForReusedBase,
+      actionSource: `${generatedActionSource(selectedModel)} · \`${action.preset}\``,
+      reuseStatus: generatedActionReuseStatus(slot, selectedModel),
+      disabled: !canGenerateAction,
     });
   }
 
@@ -223,11 +269,11 @@ function actionRows(slot: any, action: any, selectedModel: any): ChoiceRow[] {
       key: `${source}:${entry.id}`,
       value: `${source}:${entry.id}`,
       candidate: `Asset Center：\`${entry.displayName}\``,
-      modelSource: action.linkedModelSource ?? "沿用 Asset Center 本体",
+      modelSource: `Asset Center 已有${assetSubject(slot)}动作GLB`,
       action: action.name,
       scene: action.scene,
-      actionSource: hasParent ? "关联动作 GLB" : "关联或原生动作 GLB",
-      reuseStatus: hasParent ? "`parentAssetId` 必须匹配" : "必须验证兼容关系",
+      actionSource: hasParent ? "Asset Center 已有动作 GLB · 游戏直接复用" : "Asset Center 已有动作 GLB · 验证兼容后复用",
+      reuseStatus: hasParent ? `\`parentAssetId\` 与${assetSubject(slot)}静态 GLB 匹配` : "骨骼兼容关系必须验证",
       previewUrl: safePreviewUrl(entry.previewUrl),
       disabled: hasParent ? !linked : !(reusedBase && compatible),
       conditional: true,
@@ -238,10 +284,10 @@ function actionRows(slot: any, action: any, selectedModel: any): ChoiceRow[] {
     key: "runtime_procedural",
     value: "runtime_procedural",
     candidate: runtimeCandidate(action),
-    modelSource: action.runtimeModelSource ?? `沿用已选${slot.name}本体`,
+    modelSource: staticModelSourceForAction(slot, selectedModel),
     action: action.name,
     scene: action.scene,
-    actionSource: action.runtimeSource ?? "运行时程序动画",
+    actionSource: action.runtimeSource ?? "运行时程序动画（不生成动作 GLB）",
     reuseStatus: action.runtimeReuseStatus ?? (String(action.name).toLowerCase() === "walk" ? "无动作资产" : "无需独立 GLB"),
   });
 
@@ -250,7 +296,7 @@ function actionRows(slot: any, action: any, selectedModel: any): ChoiceRow[] {
       key: "primitive_fallback",
       value: "primitive_fallback",
       candidate: "运行时动作兜底",
-      modelSource: `沿用已选${slot.name}本体`,
+      modelSource: staticModelSourceForAction(slot, selectedModel),
       action: action.name,
       scene: action.scene,
       actionSource: "运行时程序动画",
@@ -283,26 +329,6 @@ function RequirementRows({
         <th className="entity-cell" scope="row">{index === 0 ? entity : "〃"}</th>
         <td>{requirement}</td>
         <td className="option-cell">{optionLabel(index)}</td>
-        <td className="candidate-cell">
-          {row.previewUrl ? (
-            <a
-              href={row.previewUrl}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(event) => {
-                event.preventDefault();
-                void openExternalLink(row.previewUrl!);
-              }}
-            >
-              <FormattedText value={row.candidate} /><span aria-hidden="true">↗</span>
-            </a>
-          ) : <FormattedText value={row.candidate} />}
-        </td>
-        <td>{row.modelSource}</td>
-        <td>{row.action === "—" ? "—" : <code>{row.action}</code>}</td>
-        <td>{row.scene}</td>
-        <td><FormattedText value={row.actionSource} /></td>
-        <td><FormattedText value={row.reuseStatus} /></td>
         <td className="selection-cell">
           <label>
             <input
@@ -315,6 +341,26 @@ function RequirementRows({
             <span>{selected ? (row.recommended ? "推荐" : "已选择") : row.conditional ? "条件可选" : ""}</span>
           </label>
         </td>
+        <td className="candidate-cell">
+          {row.previewUrl ? (
+            <a
+              href={row.previewUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(event) => {
+                event.preventDefault();
+                void openHostLink(row.previewUrl!);
+              }}
+            >
+              <FormattedText value={row.candidate} /><span aria-hidden="true">↗</span>
+            </a>
+          ) : <FormattedText value={row.candidate} />}
+        </td>
+        <td>{row.modelSource}</td>
+        <td>{row.action === "—" ? "—" : <code>{row.action}</code>}</td>
+        <td>{row.scene}</td>
+        <td><FormattedText value={row.actionSource} /></td>
+        <td><FormattedText value={row.reuseStatus} /></td>
       </tr>
     );
   });
@@ -324,7 +370,10 @@ export function AssetSourcingBoard() {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [choices, setChoices] = useState<ChoiceState | null>(null);
   const [pending, setPending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [displayMode, setDisplayMode] = useState<DisplayMode>(() => currentDisplayMode());
+  const [displayError, setDisplayError] = useState("");
 
   useEffect(() => subscribeToolOutput((output) => {
     const next = output?.proposal ?? output;
@@ -375,10 +424,56 @@ export function AssetSourcingBoard() {
     }
   };
 
+  const toggleFullscreen = async () => {
+    const requestedMode: DisplayMode = displayMode === "fullscreen" ? "inline" : "fullscreen";
+    setDisplayError("");
+    try {
+      const grantedMode = await requestDisplayMode(requestedMode);
+      setDisplayMode(grantedMode);
+      if (grantedMode !== requestedMode) setDisplayError(`宿主仅授予 ${grantedMode} 显示模式`);
+    } catch {
+      setDisplayError("当前宿主不支持切换全屏显示");
+    }
+  };
+
+  const refreshAssets = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    setDisplayError("");
+    try {
+      await requestAssetCatalogRefresh();
+      window.setTimeout(() => setRefreshing(false), 1200);
+    } catch {
+      setRefreshing(false);
+      setDisplayError("无法请求刷新 Asset Center，请稍后重试");
+    }
+  };
+
   return (
-    <main className="sourcing-shell">
-      <h1>完整资产确认表</h1>
+    <main className="sourcing-shell" data-display-mode={displayMode}>
+      <header className="board-header">
+        <h1>完整资产确认表</h1>
+        <div className="header-actions">
+          <button
+            className="refresh-button"
+            type="button"
+            disabled={refreshing}
+            onClick={() => void refreshAssets()}
+          >
+            {refreshing ? "正在刷新…" : "刷新资产"}
+          </button>
+          <button
+            className="display-mode-button"
+            type="button"
+            aria-pressed={displayMode === "fullscreen"}
+            onClick={() => void toggleFullscreen()}
+          >
+            {displayMode === "fullscreen" ? "退出全屏" : "全屏查看"}
+          </button>
+        </div>
+      </header>
       {error ? <div className="error-banner">{error}</div> : null}
+      {displayError ? <div className="display-error" role="status">{displayError}</div> : null}
       <div className="table-scroll">
         <table>
           <thead>
@@ -386,13 +481,13 @@ export function AssetSourcingBoard() {
               <th>角色/实体</th>
               <th>资产需求</th>
               <th>选项</th>
+              <th>当前选择</th>
               <th>候选方案（点击预览）</th>
               <th>模型来源</th>
               <th>动作</th>
               <th>触发场景</th>
               <th>动作来源</th>
               <th>复用状态</th>
-              <th>当前选择</th>
             </tr>
           </thead>
           <tbody>
@@ -403,7 +498,7 @@ export function AssetSourcingBoard() {
                 <RequirementRows
                   key={`${slot.id}:model`}
                   entity={entityLabel(slot)}
-                  requirement="本体模型"
+                  requirement={assetSubject(slot)}
                   rows={modelRows(slot)}
                   selectedValue={modelValue(selected.model)}
                   onSelect={(value) => updateModel(slot, value)}
@@ -412,7 +507,7 @@ export function AssetSourcingBoard() {
                   <RequirementRows
                     key={`${slot.id}:${action.name}`}
                     entity={entityLabel(slot)}
-                    requirement={actionRequirement(action)}
+                    requirement={actionRequirement(slot, action)}
                     rows={actionRows(slot, action, selected.model)}
                     selectedValue={modelValue(selected.actions[action.name])}
                     onSelect={(value) => updateAction(slot.id, action.name, value)}

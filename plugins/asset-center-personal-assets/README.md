@@ -2,7 +2,7 @@
 
 This plugin lets Codex read the current Asset Center owner's complete library in grouped Static GLB, Action GLB, and Procedural Prop sections, show candidates for selection, and import verified local GLB copies into a game workspace.
 
-Version `0.4.5` renders the sourcing gate as a complete asset confirmation table with exactly ten columns: 角色/实体、资产需求、选项、候选方案（点击预览）、模型来源、动作、触发场景、动作来源、复用状态、当前选择. Every asset requirement expands into A/B/C-style single-choice rows. Only real Asset Center candidates appear, their names open HTTP/HTTPS preview pages, linked actions remain conditional on the selected base, and changing the base resets incompatible actions. The footer contains only the final confirmation button; no cost or summary statistics are displayed.
+Version `0.4.6` renders the sourcing gate as a complete asset confirmation table with exactly ten columns: 角色/实体、资产需求、选项、当前选择、候选方案（点击预览）、模型来源、动作、触发场景、动作来源、复用状态. Character and creature bases are 人物/主体; non-living bases are 道具 and their action groups are 道具动作. Action rows distinguish direct Asset Center action-GLB reuse, Tripo retargeting from an existing static GLB, and paired new static/action generation. Every asset requirement expands into A/B/C-style single-choice rows. Only real Asset Center candidates appear; their names ask the host to open HTTP/HTTPS preview pages and fall back to an external browser on older hosts. 刷新资产 asks Codex to reload the complete catalog and rebuild the proposal without importing or generating, while 全屏查看 requests fullscreen from a user click. Linked actions remain conditional on the selected base, and changing the base resets incompatible actions. The footer contains only the final confirmation button; no cost or summary statistics are displayed.
 
 ## Configure
 
@@ -54,7 +54,7 @@ The importer validates byte size, SHA-256, and the GLB header. Repeating the sam
 
 - `list_asset_catalog`: read the complete library grouped as 静态 GLB → 动作 GLB → 程序道具, including classification, description, animations, size, and base/action relationships.
 - `propose_asset_manifest`: read one catalog snapshot and build a data-only legacy manifest or progressive sourcing proposal.
-- `render_asset_sourcing_board`: render a prepared proposal as the compact Apps SDK UI selection table; it never reads the catalog again.
+- `render_asset_sourcing_board`: render a prepared proposal as the complete Apps SDK UI selection table; it never reads the catalog again.
 - `confirm_asset_sourcing_plan`: validate and freeze the one final confirmation; it does not import or generate.
 - `search_personal_assets`: search and paginate the owner's GLBs.
 - `get_personal_asset`: read metadata and the stable preview page URL.

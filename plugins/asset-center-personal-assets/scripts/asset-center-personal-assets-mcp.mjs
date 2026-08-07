@@ -9,7 +9,7 @@ import { sourcingBoardHtml } from "./sourcing-board-resource.mjs";
 import { buildSourcingProposal, normalizeConfirmedSourcingPlan } from "./sourcing-contract.mjs";
 
 const SERVER_NAME = "asset-center-personal-assets";
-const SERVER_VERSION = "0.4.5";
+const SERVER_VERSION = "0.4.6";
 const PROTOCOL_VERSION = "2024-11-05";
 const DEFAULT_API_BASE_URL = "https://studio.13-216-49-19.sslip.io/codex/v1";
 const DEFAULT_TARGET_DIRECTORY = "public/assets/asset-center";
@@ -17,7 +17,7 @@ const LOCK_SCHEMA = "shark.asset-center-lock/v1";
 const ASSET_SCHEMA = "shark.asset-center-import/v1";
 const MAX_GLB_BYTES = 512 * 1024 * 1024;
 
-const SOURCING_BOARD_URI = "ui://asset-center-personal-assets/sourcing-board-v3.html";
+const SOURCING_BOARD_URI = "ui://asset-center-personal-assets/sourcing-board-v4.html";
 
 const tools = [
   {
@@ -108,7 +108,7 @@ const tools = [
   },
   {
     name: "render_asset_sourcing_board",
-    description: "Render one prepared shark-asset-sourcing-proposal as 完整资产确认表 with exactly these columns in this order: 角色/实体、资产需求、选项、候选方案（点击预览）、模型来源、动作、触发场景、动作来源、复用状态、当前选择. Every 资产需求 is a single-choice group. Real Asset Center candidates use their HTTP/HTTPS previewUrl; missing candidates produce no placeholder row. The footer contains only 确认资产方案并开始制作 and no cost or summary statistics. Always call propose_asset_manifest first and pass its complete proposal. This tool does not query the catalog again.",
+    description: "Render one prepared shark-asset-sourcing-proposal as 完整资产确认表 with exactly these columns in this order: 角色/实体、资产需求、选项、当前选择、候选方案（点击预览）、模型来源、动作、触发场景、动作来源、复用状态. Every 资产需求 is a single-choice group. Real Asset Center candidates use their HTTP/HTTPS previewUrl; missing candidates produce no placeholder row. The footer contains only 确认资产方案并开始制作 and no cost or summary statistics. Always call propose_asset_manifest first and pass its complete proposal. This tool does not query the catalog again.",
     inputSchema: {
       type: "object",
       properties: { proposal: { type: "object" } },

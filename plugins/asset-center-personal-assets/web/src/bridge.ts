@@ -12,13 +12,17 @@ declare global {
     openai?: {
       toolOutput?: any;
       widgetState?: any;
+      displayMode?: DisplayMode;
       setWidgetState?: (state: any) => void;
       callTool?: (name: string, args: any) => Promise<any>;
       sendFollowUpMessage?: (args: { prompt: string; scrollToBottom?: boolean } | string) => Promise<void> | void;
+      requestDisplayMode?: (args: { mode: DisplayMode }) => Promise<{ mode?: DisplayMode }>;
       openExternal?: (args: { href: string; redirectUrl?: boolean }) => Promise<void> | void;
     };
   }
 }
+
+export type DisplayMode = "inline" | "fullscreen" | "pip";
 
 let requestId = 0;
 const pending = new Map<number, { resolve: (value: any) => void; reject: (reason: any) => void }>();
@@ -75,7 +79,33 @@ export function restoredWidgetState() {
   return window.openai?.widgetState;
 }
 
-export async function openExternalLink(href: string) {
+export function currentDisplayMode(): DisplayMode {
+  const mode = window.openai?.displayMode;
+  return mode === "fullscreen" || mode === "pip" ? mode : "inline";
+}
+
+export async function requestDisplayMode(mode: DisplayMode): Promise<DisplayMode> {
+  if (window.openai?.requestDisplayMode) {
+    try {
+      const result = await window.openai.requestDisplayMode({ mode });
+      return result?.mode ?? mode;
+    } catch {
+      // Fall through to the standard MCP Apps request.
+    }
+  }
+
+  const result = await request("ui/request-display-mode", { mode });
+  return result?.mode ?? mode;
+}
+
+export async function openHostLink(href: string) {
+  try {
+    const result = await request("ui/open-link", { url: href });
+    if (!result?.isError) return;
+  } catch {
+    // Older hosts may only expose the OpenAI compatibility bridge.
+  }
+
   if (window.openai?.openExternal) {
     try {
       await window.openai.openExternal({ href, redirectUrl: false });
@@ -96,4 +126,13 @@ export function publishConfirmedPlan(plan: any) {
   } else {
     post("ui/message", { content: [{ type: "text", text: "我已确认资产方案，请按最终选择开始复用和制作。" }] });
   }
+}
+
+export async function requestAssetCatalogRefresh() {
+  const prompt = "我刚在 Asset Center 新增或更新了资产。请重新读取完整资产目录，按当前游戏的角色/实体、动作与触发场景重新匹配候选，并重新打开完整资产确认表；不要沿用旧目录缓存，也不要导入或生成资产。";
+  if (window.openai?.sendFollowUpMessage) {
+    await window.openai.sendFollowUpMessage({ prompt, scrollToBottom: true });
+    return;
+  }
+  post("ui/message", { content: [{ type: "text", text: prompt }] });
 }
