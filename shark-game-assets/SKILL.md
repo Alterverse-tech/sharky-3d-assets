@@ -21,6 +21,7 @@ Before taking task actions with this skill, perform a best-effort self-update ch
 ## Required behavior
 
 - For every task that generates, regenerates, rigs, animates, or integrates GLB assets, complete the asset sourcing confirmation gate before any import or generation. After confirmation, create or restore the canonical local preview/progress page by default, even when the user did not ask for it. In a fresh project this stage is a generate-and-deploy, not a restore: create the page files from the bundled template and start (or reuse) the local server so `/regeneration.html` is verifiably served before the first remote generation call — and narrate it to the user as generating/deploying, saying "restore" only when the page previously existed. Keep status synchronized until the task finishes.
+- When a GLB has an Asset Center `assetId`, whether it is only recalled or has already been pulled into the project, “preview model” must open `/asset-center/preview/ast_xxx`. `/regeneration.html` is only for viewing task progress while generating, regenerating, rigging, or creating animations; it must not be used or presented as a model preview link.
 - Skip the default preview only for publish-only requests, help/explanation-only requests, readiness-only or other read-only inspection that does not generate/integrate asset files, or when the user explicitly declines a preview page.
 - If the game prompt contains explicit or implicit entities, such as a player, character, enemy, collectible, vehicle, weapon, obstacle, boss, mascot, key prop, or environment object, GLB generation is a required stage when the tool is available.
 - Generate only 1-3 key assets by default. Prioritize the player/main character first, then the gameplay-critical enemy, collectible, vehicle, hazard, or key prop. Do not generate decorative filler.
@@ -102,6 +103,10 @@ Use `auto` only when you are comfortable with the server choosing from the promp
 ## Asset sourcing confirmation gate (reuse before generation)
 
 For a game or story with concrete model/action requirements, inspect reusable assets before generation. Codex remains the orchestrator: this Skill does not import another Skill's implementation. The Asset Center personal-assets Plugin is a blocking prerequisite for this sourcing gate: when its MCP tools are absent or unusable, pause the asset workflow and resolve installation/configuration with the user. Do not replace it with current-project reuse, a generation-only plan, or another source.
+
+### GLB recall result contract
+
+When the user asks to list, search, recall, inspect, or show available GLB models, call `list_asset_catalog` or `search_personal_assets` with the current `workspaceRoot` and render the Plugin's Markdown text result before any prose summary. The table must keep exactly these columns: 资产（点击预览）、类别/类型、适合场景、动画、大小、更新时间、关联模型/动作、导入状态、本地 modelPath. 适合场景 comes from the Plugin's `description`, `classification`, and `tags` synthesis, while structured results retain asset IDs and rig metadata for matching and integration. Keep the structured result as development context for pagination. Never reduce the result to names only or expose raw JSON as the user-facing answer. A read-only recall request stops after the table unless the user separately asks to select, import, generate, or integrate an asset.
 
 Never use confirmation metadata read from the workspace to satisfy the current asset-sourcing confirmation gate. A persisted sourcing plan is a historical selection snapshot, not current-task authorization.
 

@@ -18,6 +18,32 @@ const LOCK_SCHEMA = "shark.asset-center-lock/v1";
 const ASSET_SCHEMA = "shark.asset-center-import/v1";
 const MAX_GLB_BYTES = 512 * 1024 * 1024;
 
+const SUITABLE_SCENES_BY_CLASSIFICATION = Object.freeze({
+  人物: ["角色扮演", "剧情演出", "NPC/主角"],
+  人物动作: ["角色动画", "动作复用", "交互演出"],
+  汽车: ["竞速驾驶", "城市载具", "开放世界"],
+  飞机: ["飞行玩法", "空战关卡", "航空载具"],
+  轮船: ["航海玩法", "水上载具", "海上运输"],
+  球类: ["体育玩法", "训练关卡", "互动道具"],
+  建筑: ["关卡搭建", "建筑场景", "环境布置"],
+  场景: ["环境搭建", "关卡背景", "空间探索"],
+  普通道具: ["场景装饰", "交互玩法", "关卡物件"],
+  其他: ["通用游戏场景"]
+});
+
+const SUITABLE_SCENE_CUES = Object.freeze([
+  { label: "科幻太空", terms: ["太空", "宇宙", "space", "cosmic", "spacecraft", "rocket", "satellite"] },
+  { label: "潜入剧情", terms: ["间谍", "潜入", "spy", "stealth"] },
+  { label: "中世纪冒险", terms: ["中世纪", "骑士", "城堡", "medieval", "knight", "castle"] },
+  { label: "科幻场景", terms: ["科幻", "赛博", "未来", "sci-fi", "scifi", "cyberpunk", "futuristic"] },
+  { label: "海洋场景", terms: ["海洋", "海上", "航海", "ocean", "naval", "marine"] },
+  { label: "城市场景", terms: ["城市", "都市", "city", "urban"] },
+  { label: "体育玩法", terms: ["体育", "球场", "sport", "stadium"] },
+  { label: "战斗关卡", terms: ["战斗", "武器", "combat", "battle", "weapon"] },
+  { label: "竞速驾驶", terms: ["赛车", "竞速", "racing", "race"] },
+  { label: "恐怖探索", terms: ["恐怖", "惊悚", "horror"] }
+]);
+
 const SOURCING_BOARD_URI = "ui://asset-center-personal-assets/sourcing-board-v5.html";
 
 const tools = [
@@ -139,11 +165,12 @@ const tools = [
   },
   {
     name: "list_asset_catalog",
-    description: "Fetch the user's complete personal Asset Center library grouped as Static GLB, Action GLB, and Procedural Prop. Entries include life classification, description, animations, size, and authoritative base/action relationships. Call this FIRST when planning a game from a story or matching scene requirements to the user's assets.",
+    description: "Fetch the user's complete personal Asset Center library grouped as Static GLB, Action GLB, and Procedural Prop. Returns a detailed Markdown recall table plus structured catalog data. Pass workspaceRoot to include import status and local modelPath. Call this FIRST when planning a game from a story or matching scene requirements to the user's assets.",
     inputSchema: {
       type: "object",
       properties: {
-        limit: { type: "integer", minimum: 1, maximum: 1000, default: 300 }
+        limit: { type: "integer", minimum: 1, maximum: 1000, default: 300 },
+        workspaceRoot: { type: "string", minLength: 1 }
       },
       additionalProperties: false
     },
@@ -151,7 +178,7 @@ const tools = [
   },
   {
     name: "search_personal_assets",
-    description: "Keyword search over the user's published GLB assets (multi-term AND across name, prompt, semantic tags, description, animations). Prefer list_asset_catalog for semantic/story-driven matching; use this for a direct lookup of a known asset.",
+    description: "Keyword search over the user's published GLB assets (multi-term AND across name, prompt, semantic tags, description, animations). Returns a detailed Markdown recall table plus structured search data. Pass workspaceRoot to include import status and local modelPath. Prefer list_asset_catalog for semantic/story-driven matching; use this for a direct lookup of a known asset.",
     inputSchema: {
       type: "object",
       properties: {
@@ -162,7 +189,8 @@ const tools = [
         },
         hasAnimations: { type: "boolean" },
         limit: { type: "integer", minimum: 1, maximum: 50, default: 12 },
-        cursor: { type: "string" }
+        cursor: { type: "string" },
+        workspaceRoot: { type: "string", minLength: 1 }
       },
       additionalProperties: false
     },
@@ -334,7 +362,7 @@ async function callTool(name, args) {
 
 function toolResult(result, isError) {
   return {
-    content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    content: [{ type: "text", text: !isError && typeof result?.markdown === "string" ? result.markdown : JSON.stringify(result, null, 2) }],
     structuredContent: result,
     structured_content: result,
     ...(isError ? { isError: true } : {})
@@ -375,7 +403,8 @@ async function listAssetCatalog(args) {
     params.set("limit", String(args.limit));
   }
   const suffix = params.size ? `?${params}` : "";
-  return apiJson(`/catalog${suffix}`, { authenticated: true });
+  const catalog = await apiJson(`/catalog${suffix}`, { authenticated: true });
+  return { ...catalog, markdown: await assetRecallMarkdown(catalog, args.workspaceRoot) };
 }
 
 async function searchPersonalAssets(args) {
@@ -393,7 +422,124 @@ async function searchPersonalAssets(args) {
   }
   if (args.cursor !== undefined) params.set("cursor", requireString(args.cursor, "cursor"));
   const suffix = params.size ? `?${params}` : "";
-  return apiJson(`/assets${suffix}`, { authenticated: true });
+  const result = await apiJson(`/assets${suffix}`, { authenticated: true });
+  return { ...result, markdown: await assetRecallMarkdown(result, args.workspaceRoot) };
+}
+
+function recalledAssetEntries(result) {
+  const grouped = catalogEntries(result);
+  if (grouped.length) return grouped;
+  if (Array.isArray(result?.assets)) return result.assets;
+  if (Array.isArray(result?.items)) return result.items;
+  return [];
+}
+
+async function assetRecallMarkdown(result, workspaceRoot) {
+  let lock = null;
+  if (workspaceRoot !== undefined) {
+    const root = await resolveWorkspaceRoot(workspaceRoot);
+    lock = await readLockFile(path.join(root, "asset-center.lock.json"));
+  }
+
+  const entries = recalledAssetEntries(result);
+  const lines = [
+    "### GLB 模型召回结果",
+    "",
+    "| 资产（点击预览） | 类别/类型 | 适合场景 | 动画 | 大小 | 更新时间 | 关联模型/动作 | 导入状态 | 本地 modelPath |",
+    "|---|---|---|---|---|---|---|---|---|"
+  ];
+
+  if (!entries.length) {
+    lines.push("| — | — | — | — | — | — | — | 未找到匹配资产 | — |");
+  } else {
+    for (const asset of entries) {
+      const locked = lock?.assets?.[asset.id];
+      lines.push(`| ${assetPreviewCell(asset)} | ${assetTypeCell(asset)} | ${assetSuitableScenesCell(asset)} | ${assetAnimationsCell(asset)} | ${assetSizeCell(asset)} | ${assetUpdatedCell(asset)} | ${assetRelationshipCell(asset)} | ${locked ? "✅ 已导入" : lock ? "未导入" : "—"} | ${locked?.modelPath ? markdownCode(locked.modelPath) : "—"} |`);
+    }
+  }
+
+  const total = Number.isSafeInteger(result?.total) ? result.total : entries.length;
+  const completeness = result?.truncated === false ? "完整目录" : result?.nextCursor || result?.cursor ? "仍有下一页" : "本次返回";
+  lines.push("", `共 ${total} 项 · ${completeness}`);
+  return lines.join("\n");
+}
+
+function markdownCell(value) {
+  return String(value ?? "").replaceAll("|", "／").replaceAll("\n", " ").trim() || "—";
+}
+
+function markdownCode(value) {
+  const text = markdownCell(value).replaceAll("`", "'");
+  return text === "—" ? text : `\`${text}\``;
+}
+
+function assetPreviewCell(asset) {
+  const name = markdownCell(asset?.displayName || asset?.name || asset?.id);
+  if (typeof asset?.previewUrl !== "string") return name;
+  try {
+    const preview = new URL(asset.previewUrl);
+    return preview.protocol === "http:" || preview.protocol === "https:" ? `[${name}](${preview.href})` : name;
+  } catch {
+    return name;
+  }
+}
+
+function assetTypeCell(asset) {
+  const category = asset?.categoryLabel || asset?.category;
+  const type = asset?.classification || asset?.kind || asset?.format;
+  return markdownCell([category, type].filter(Boolean).join(" / "));
+}
+
+function assetSuitableScenesCell(asset) {
+  const semanticText = [
+    asset?.description,
+    ...(Array.isArray(asset?.tags) ? asset.tags : [])
+  ].filter(Boolean).join(" ").toLocaleLowerCase("zh-CN");
+  const scenes = [];
+  for (const cue of SUITABLE_SCENE_CUES) {
+    if (cue.terms.some((term) => semanticText.includes(term.toLocaleLowerCase("zh-CN")))) scenes.push(cue.label);
+  }
+  const classification = asset?.classification || inferredClassification(asset);
+  scenes.push(...(SUITABLE_SCENES_BY_CLASSIFICATION[classification] ?? SUITABLE_SCENES_BY_CLASSIFICATION.其他));
+  return markdownCell([...new Set(scenes)].slice(0, 3).join("、"));
+}
+
+function inferredClassification(asset) {
+  if (asset?.actionId || asset?.category === "action-glb") return "人物动作";
+  if (asset?.kind === "character") return "人物";
+  if (asset?.kind === "environment") return "场景";
+  if (["static_prop", "interactive_prop", "animated_prop", "vehicle"].includes(asset?.kind)) return "普通道具";
+  return "其他";
+}
+
+function assetAnimationsCell(asset) {
+  const animations = Array.isArray(asset?.animations) ? asset.animations.filter(Boolean) : [];
+  if (!animations.length && asset?.actionId) animations.push(asset.actionId);
+  return markdownCell(animations.join(", "));
+}
+
+function assetSizeCell(asset) {
+  const bytes = Number(asset?.sizeBytes);
+  if (!Number.isFinite(bytes) || bytes < 0) return "—";
+  if (bytes < 1000) return `${bytes} B`;
+  if (bytes < 1000000) return `${(bytes / 1000).toFixed(1)} KB`;
+  return `${(bytes / 1000000).toFixed(2)} MB`;
+}
+
+function assetUpdatedCell(asset) {
+  const timestamp = Date.parse(asset?.updatedAt);
+  if (!Number.isFinite(timestamp)) return "—";
+  return `${new Date(timestamp).toISOString().slice(0, 16).replace("T", " ")} UTC`;
+}
+
+function assetRelationshipCell(asset) {
+  if (asset?.parentDisplayName || asset?.parentAssetId) {
+    return markdownCell(`父模型：${asset.parentDisplayName || asset.parentAssetId}`);
+  }
+  if (Array.isArray(asset?.actionAssetIds) && asset.actionAssetIds.length) {
+    return `关联动作 ${asset.actionAssetIds.length} 个`;
+  }
+  return "—";
 }
 
 async function getPersonalAsset(args) {

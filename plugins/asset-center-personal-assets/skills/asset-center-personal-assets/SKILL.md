@@ -13,6 +13,10 @@ Use the Asset Center MCP tools to bring the user's own models into the game as i
 
 **B. 剧本/需求驱动（story-driven manifest）** — the user describes a game, story, or scene to build ("根据这个剧本做一个 threejs 游戏"). Follow the manifest workflow below. This mode is the default whenever game development starts and the user's library may be relevant.
 
+## GLB recall output
+
+For every read-only request to list, search, recall, or inspect personal models, pass `workspaceRoot` when the current project is known and render the tool's Markdown text result before any prose summary. Keep exactly these columns: 资产（点击预览）、类别/类型、适合场景、动画、大小、更新时间、关联模型/动作、导入状态、本地 modelPath. The Plugin derives 适合场景 from `description`, `classification`, and `tags`; structured results retain asset IDs and rig metadata for semantic matching and integration. Preserve the structured result for pagination. Never replace the table with a names-only list or raw JSON.
+
 ## Current-task confirmation and game-intent boundary
 
 Never use confirmation metadata read from the workspace to satisfy the current asset-sourcing confirmation gate. `asset-sourcing-plan.json` is a historical selection snapshot, not current-task authorization.
