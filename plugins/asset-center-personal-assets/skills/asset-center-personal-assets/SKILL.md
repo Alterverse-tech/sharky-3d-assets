@@ -51,7 +51,7 @@ Shared asset names, a shared repository, or generic entities such as a character
 
 ## Rules
 
-- Never ask the user to paste a Service Token into chat or source code. If authentication is missing, tell them to set `ASSET_CENTER_SERVICE_TOKEN` in their local Codex environment.
+- Authentication needs no configuration: the first library request opens Asset Center's authorization page in the user's browser (Google or email code), and tokens stay on their machine. If a request reports pending authorization, tell the user to finish the page that just opened; when no browser appeared, give them the authorization link printed on stderr. Never ask the user to paste a Service Token or any token into chat or source code — `ASSET_CENTER_SERVICE_TOKEN` is only an optional environment override for CI or shared runners.
 - Do not pull assets merely because they matched. Pull only what the user confirmed.
 - A `reuse_linked_action` must have `parentAssetId` equal to the selected base character asset id. Clear the old action choice whenever the base changes. Cross-character reuse requires verified compatibility evidence.
 - Never use a signed download URL in game code. The pull tool exchanges it internally and returns only workspace-relative paths.

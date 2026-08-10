@@ -7,6 +7,7 @@ import process from "node:process";
 
 import { sourcingBoardHtml } from "./sourcing-board-resource.mjs";
 import { buildSourcingProposal, normalizeConfirmedSourcingPlan } from "./sourcing-contract.mjs";
+import { ensureOAuthAccessToken } from "./oauth-login.mjs";
 
 const SERVER_NAME = "asset-center-personal-assets";
 const SERVER_VERSION = "0.4.8";
@@ -506,7 +507,7 @@ async function inspectImportedAssets(args) {
 async function apiJson(resource, options = {}) {
   const baseUrl = apiBaseUrl();
   const headers = { accept: "application/json" };
-  if (options.authenticated) headers.authorization = `Bearer ${serviceToken()}`;
+  if (options.authenticated) headers.authorization = `Bearer ${await resolveBearerToken(options.forceFreshAuth)}`;
   if (options.body !== undefined) headers["content-type"] = "application/json";
   const response = await fetch(`${baseUrl}${resource}`, {
     method: options.method ?? "GET",
@@ -521,10 +522,22 @@ async function apiJson(resource, options = {}) {
     payload = {};
   }
   if (!response.ok) {
+    // OAuth 访问令牌过期/被撤销: 强制刷新一次后重试(显式 Service Token 模式不重试)
+    if (response.status === 401 && options.authenticated && !options.forceFreshAuth && !envServiceToken()) {
+      return apiJson(resource, { ...options, forceFreshAuth: true });
+    }
     const message = typeof payload?.error === "string" ? payload.error : typeof payload?.message === "string" ? payload.message : `HTTP ${response.status}`;
     throw new Error(`Asset Center request failed: ${message}`);
   }
   return payload;
+}
+
+/** 鉴权解析: 显式 Service Token(向后兼容) > OAuth 浏览器授权登录(免配置) */
+async function resolveBearerToken(forceFreshAuth = false) {
+  const configured = envServiceToken();
+  if (configured) return configured;
+  const issuerOrigin = new URL(apiBaseUrl()).origin;
+  return ensureOAuthAccessToken(issuerOrigin, { forceRefresh: forceFreshAuth });
 }
 
 function apiBaseUrl() {
@@ -541,10 +554,8 @@ function apiBaseUrl() {
   return configured;
 }
 
-function serviceToken() {
-  const token = process.env.ASSET_CENTER_SERVICE_TOKEN?.trim();
-  if (!token) throw new Error("ASSET_CENTER_SERVICE_TOKEN is required; create a Service Token in Asset Center and export it only in your local environment");
-  return token;
+function envServiceToken() {
+  return process.env.ASSET_CENTER_SERVICE_TOKEN?.trim() || undefined;
 }
 
 async function resolveWorkspaceRoot(value) {

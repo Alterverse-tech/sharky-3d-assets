@@ -160,29 +160,19 @@ claude plugin install asset-center-personal-assets@sharky-3d-assets
 
 If installation or its verification fails, report the failure and ask whether the user wants to correct setup or continue without personal Asset Center reuse. Never silently treat installation failure as installed.
 
-After a successful install, tell the user to configure `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex or Claude Code without pasting it into chat. For Codex Desktop, tell the user exactly, without paraphrasing:
-
-```text
-按 Ctrl+C 取消后，正确顺序是：
-read -s ASSET_CENTER_SERVICE_TOKEN
-
-此时只粘贴新的令牌并回车，然后再执行：
-launchctl setenv ASSET_CENTER_SERVICE_TOKEN "$ASSET_CENTER_SERVICE_TOKEN"
-
-最后完全退出并重启 Codex Desktop。
-```
+After a successful install, no token configuration is required. The first request that needs the personal library opens Asset Center's authorization page in the user's browser; they sign in the way they already do (Google or email verification code), press 允许访问, and the browser hands the session back automatically. Tokens are stored only on their machine and refresh silently, so this happens once. Tell the user to finish that page when it appears, and if no browser opens, to use the authorization link the plugin prints. `ASSET_CENTER_SERVICE_TOKEN` remains an optional environment override for CI or shared runners — never ask the user to paste a token into chat.
 
 Then fully restart the host and start a new Codex thread or fresh Claude Code session so the Plugin skills and MCP tools are discovered. Do not claim the Plugin is usable in the current session. Successful installation is a terminal state for the current asset workflow: stop so the user can continue in that fresh session.
 
 If the user declines installation, has already declined it in this task, or explicitly chooses to continue without the Plugin, inspect only current-project `asset_manifest.json`, `asset-center.lock.json`, and local GLBs. Present the same model/action requirements as a Markdown sourcing table, wait for explicit confirmation, then generate only the confirmed gaps. Do not claim the unavailable personal catalog is empty or import a historical Asset Center item without a current selection.
 
-If the Plugin is installed but `ASSET_CENTER_SERVICE_TOKEN` is missing, unavailable to the host process, invalid, or rejected, report the specific configuration/authentication state and ask whether the user wants to correct setup or continue without personal Asset Center reuse. Do not ask the user to paste a token. The same choice applies when a personal-assets MCP request fails or the Asset Center catalog is unavailable; a failed query is never an empty catalog.
+If the Plugin is installed but authorization has not completed — the user has not finished the browser authorization page, the login timed out, or a stored session was revoked and could not refresh — report that specific state and ask whether the user wants to finish signing in or continue without personal Asset Center reuse. Surface the authorization link when no browser opened. Do not ask the user to paste a token. The same choice applies when a personal-assets MCP request fails or the Asset Center catalog is unavailable; a failed query is never an empty catalog.
 
 The required order is:
 
 ```text
 choose Plugin reuse or no-plugin route
-→ Plugin route: installed and discovered in a fresh session with `ASSET_CENTER_SERVICE_TOKEN`
+→ Plugin route: installed and discovered in a fresh session, signed in through the browser authorization page
 → no-plugin route: inspect current-project local assets only
 → extract model/action requirements
 → inspect current project imports
@@ -591,6 +581,9 @@ function tick(delta, elapsed, moving) {
 
 ## Mandatory asset-integration quality gates
 
+> Executable acceptance procedure for every gate below (probes, traps, verdict levels, report format):
+> [references/asset-integration-acceptance.md](references/asset-integration-acceptance.md). Load it when verifying integrated assets.
+
 Treat this as an extensible, numbered set of blocking quality gates. Add future gates here for other cross-game asset contracts such as scale, pivot, root motion, collision proxies, animation semantics, or material compatibility. A gate applies automatically when its asset type is present; do not ask the end user to opt into it or choose technical calibration values that the asset can be inspected to determine.
 
 ### Gate 1 — Character forward-axis and orientation acceptance
@@ -674,7 +667,7 @@ Use the bundled subskill [tripo-rig-clip](subskills/tripo-rig-clip.md) when the 
 
 ## Failure handling
 
-- Asset Center personal-assets Plugin missing, its `ASSET_CENTER_SERVICE_TOKEN` missing/invalid, or a required personal-assets MCP request unavailable: state the exact condition and stop the asset workflow. Give the host-specific installation/configuration tutorial when applicable, but do not continue in this session and do not downgrade to current-project reuse, direct generation, or a generation-gap plan.
+- Asset Center personal-assets Plugin missing, its browser authorization not completed or no longer valid, or a required personal-assets MCP request unavailable: state the exact condition and stop the asset workflow. Give the host-specific installation/configuration tutorial when applicable, but do not continue in this session and do not downgrade to current-project reuse, direct generation, or a generation-gap plan.
 - Remote call blocked by policy or asset API unreachable: report that the asset service is temporarily unavailable. Do not ask for credentials and never silently substitute placeholders for requested GLB generation.
 - Gemini reference generation unavailable: the client retries the same assets once through `tripo`, then reports a concise failure if that also fails. GLBs delivered through this tripo fallback are static like any tripo-route GLB (see Route choice for the task-id mechanism): character/creature assets arrive without a skeleton or retarget clips, and runtime animation falls back to procedural/group animation.
 - Zero Tripo balance: do not retry in a loop. Keep fallbacks and record the skipped stage in the README.
