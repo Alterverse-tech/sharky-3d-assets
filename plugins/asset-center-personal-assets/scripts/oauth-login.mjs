@@ -1,7 +1,5 @@
-// oauth-login.mjs — Asset Center OAuth 2.1 登录(零依赖,授权码 + PKCE + 回环回调)
-// 复刻 ChatCut MCP 授权模型: 发现(RFC 8414) → 匿名动态注册(RFC 7591) → 浏览器授权(S256)
-// → 127.0.0.1 随机端口回调 → 令牌换发 → 本地 0600 缓存 → refresh_token 静默续期。
-// 令牌只落在用户本机 ~/.sharky-asset-center/credentials.json,不经任何第三方。
+// Asset Center OAuth 2.1: discovery → dynamic registration → browser authorization
+// → loopback callback → token exchange → local credential cache → silent refresh.
 
 import { createHash, randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
@@ -13,7 +11,7 @@ import { spawn } from "node:child_process";
 
 const CREDENTIALS_DIR = path.join(homedir(), ".sharky-asset-center");
 const CREDENTIALS_PATH = path.join(CREDENTIALS_DIR, "credentials.json");
-// 与服务端待授权请求 TTL 对齐(10 分钟): 邮箱验证码登录需要收信+输码,5 分钟偏紧
+// Match the server-side authorization request TTL: email-code sign-in can take several minutes.
 const LOGIN_TIMEOUT_MS = 10 * 60_000;
 const ACCESS_TOKEN_SKEW_MS = 60_000;
 const OAUTH_SCOPE = "openid profile email assets.read offline_access";
@@ -59,7 +57,7 @@ async function fetchJson(url, init) {
 async function discoverMetadata(issuerOrigin) {
   const { response, payload } = await fetchJson(`${issuerOrigin}/.well-known/oauth-authorization-server`);
   if (!response.ok || typeof payload.authorization_endpoint !== "string" || typeof payload.token_endpoint !== "string") {
-    throw new Error(`Asset Center 授权服务器元数据不可用(HTTP ${response.status}); 请确认服务端已部署 OAuth 支持`);
+    throw new Error(`Asset Center authorization server metadata is unavailable (HTTP ${response.status}). Ensure OAuth support is deployed.`);
   }
   return payload;
 }
@@ -78,7 +76,7 @@ async function registerClient(metadata, redirectUri) {
     })
   });
   if (!response.ok || typeof payload.client_id !== "string") {
-    throw new Error(`OAuth 客户端注册失败: ${payload.error_description ?? payload.error ?? `HTTP ${response.status}`}`);
+    throw new Error(`OAuth client registration failed: ${payload.error_description ?? payload.error ?? `HTTP ${response.status}`}`);
   }
   return payload.client_id;
 }
@@ -86,7 +84,7 @@ async function registerClient(metadata, redirectUri) {
 function waitForCallback(server, callbackPath, expectedState) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(new Error(`等待浏览器授权超时(${Math.round(LOGIN_TIMEOUT_MS / 60_000)}分钟)。请重试并在打开的页面中完成登录。`));
+      reject(new Error(`Browser authorization timed out after ${Math.round(LOGIN_TIMEOUT_MS / 60_000)} minutes. Try again and complete sign-in in the opened page.`));
     }, LOGIN_TIMEOUT_MS);
     server.on("request", (request, response) => {
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
@@ -98,24 +96,48 @@ function waitForCallback(server, callbackPath, expectedState) {
       const finish = (title, body) => {
         response.statusCode = 200;
         response.setHeader("content-type", "text/html; charset=utf-8");
-        response.end(`<!doctype html><meta charset="utf-8"><title>${title}</title><body style="font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0;background:#11141b;color:#e8ecf4"><div style="text-align:center"><h2>${title}</h2><p>${body}</p></div>`);
+        response.end(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${title}</title>
+    <style>
+      :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      * { box-sizing: border-box; }
+      body { display: grid; min-height: 100vh; min-height: 100svh; margin: 0; padding: 24px; place-items: center; background: #fff; color: #171717; }
+      main { width: min(100%, 430px); padding: 36px 34px; border: 1px solid rgba(23, 23, 23, 0.13); border-radius: 22px; background: #fff; box-shadow: 0 18px 44px rgba(23, 23, 23, 0.08); text-align: center; }
+      .success-mark { display: grid; width: 48px; height: 48px; margin: 0 auto 18px; place-items: center; }
+      h1 { margin: 0; font-size: 28px; letter-spacing: -0.04em; line-height: 1.15; }
+      p { max-width: 350px; margin: 15px auto 0; color: #666661; font-size: 15px; line-height: 1.55; }
+      @media (max-width: 480px) { body { padding: 16px; } main { padding: 34px 24px; border-radius: 18px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="success-mark" aria-hidden="true"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V5l8-3 8 3v8Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+      <h1>${title}</h1>
+      <p>${body}</p>
+    </main>
+  </body>
+</html>`);
       };
       const error = url.searchParams.get("error");
       if (error) {
-        finish("授权被拒绝", "你可以关闭此页面,回到终端。");
+        finish("Authorization declined", "You can close this page and return to your terminal.");
         clearTimeout(timer);
-        reject(new Error(`授权被拒绝: ${error}`));
+        reject(new Error(`Authorization declined: ${error}`));
         return;
       }
       const code = url.searchParams.get("code") ?? "";
       const state = url.searchParams.get("state") ?? "";
       if (!code || state !== expectedState) {
-        finish("授权参数无效", "state 校验失败,请回到终端重试。");
+        finish("Invalid authorization response", "State validation failed. Return to your terminal and try again.");
         clearTimeout(timer);
-        reject(new Error("授权回调 state 校验失败"));
+        reject(new Error("Authorization callback state validation failed"));
         return;
       }
-      finish("Asset Center 授权成功", "登录完成,现在可以关闭此页面回到你的 agent。");
+      finish("Authorization successful", "Sign-in is complete. You can now close this page and return to Codex or Claude Code.");
       clearTimeout(timer);
       resolve(code);
     });
@@ -123,18 +145,18 @@ function waitForCallback(server, callbackPath, expectedState) {
 }
 
 function openBrowser(url) {
-  // 无头/远程会话(SSH、容器、CI)没有可用浏览器: 只打印链接,用户可在本机手动打开
+  // Headless and remote sessions may not have a browser; print the URL for manual opening.
   if (process.env.ASSET_CENTER_OAUTH_NO_BROWSER === "1") return false;
   const platform = process.platform;
   const command = platform === "darwin" ? "open" : platform === "win32" ? "cmd" : "xdg-open";
   const args = platform === "win32" ? ["/c", "start", "", url] : [url];
   try {
     const child = spawn(command, args, { stdio: "ignore", detached: true });
-    child.on("error", () => log(`无法自动打开浏览器,请手动访问: ${url}`));
+    child.on("error", () => log(`Could not open a browser automatically. Open this URL manually: ${url}`));
     child.unref();
     return true;
   } catch {
-    log(`无法自动打开浏览器,请手动访问: ${url}`);
+    log(`Could not open a browser automatically. Open this URL manually: ${url}`);
     return false;
   }
 }
@@ -147,7 +169,7 @@ async function exchangeToken(metadata, form) {
   });
   if (!response.ok || typeof payload.access_token !== "string") {
     const description = payload.error_description ?? payload.error ?? `HTTP ${response.status}`;
-    const error = new Error(`令牌换发失败: ${description}`);
+    const error = new Error(`Token exchange failed: ${description}`);
     error.oauthError = payload.error;
     throw error;
   }
@@ -193,8 +215,10 @@ async function interactiveLogin(issuerOrigin) {
     authorizeUrl.searchParams.set("scope", OAUTH_SCOPE);
     authorizeUrl.searchParams.set("resource", `${issuerOrigin}/codex/v1`);
 
-    log(`正在打开浏览器完成 Asset Center 登录授权…`);
-    log(`如果页面没有自动弹出,请手动打开: ${authorizeUrl.toString()}`);
+    // 先说明再跳转: 让宿主(Codex/Claude Code)有机会把这几句转述给用户,并拿到可手动打开的链接
+    log("Starting Asset Center sign-in. If an authorization page opens, complete the confirmation there.");
+    log(`Official authorization link (this sign-in only): ${authorizeUrl.toString()}`);
+    log(`Waiting for the callback on ${redirectUri}. Sign in and press Allow access; the browser returns here automatically.`);
     openBrowser(authorizeUrl.toString());
 
     const code = await waitForCallback(server, callbackPath, state);
@@ -206,7 +230,7 @@ async function interactiveLogin(issuerOrigin) {
       redirect_uri: redirectUri
     });
     const saved = await persistTokens(issuerOrigin, clientId, tokens);
-    log("授权完成,令牌已保存到本机(仅当前用户可读)。");
+    log("Authorization complete. Credentials are stored locally for the current user only.");
     return saved;
   } finally {
     server.close();
@@ -223,7 +247,7 @@ async function refreshTokens(issuerOrigin, record) {
   return persistTokens(issuerOrigin, record.clientId, tokens, record);
 }
 
-/** 获取有效访问令牌: 缓存 → 刷新 → 交互式登录 */
+/** Obtain an access token from the cache, refresh token, or interactive sign-in. */
 export async function ensureOAuthAccessToken(issuerOrigin, options = {}) {
   const normalizedOrigin = issuerOrigin.replace(/\/+$/, "");
   const store = await readCredentialsFile();
@@ -236,17 +260,17 @@ export async function ensureOAuthAccessToken(issuerOrigin, options = {}) {
       const refreshed = await refreshTokens(normalizedOrigin, record);
       return refreshed.accessToken;
     } catch (error) {
-      log(`刷新令牌失效(${error?.message ?? error}),需要重新登录。`);
+      log(`Cached refresh token is invalid (${error?.message ?? error}). Signing in again.`);
     }
   }
   if (options.nonInteractive) {
-    throw new Error("Asset Center 需要登录授权,但当前为非交互模式。请先运行一次需要资产的操作完成浏览器登录。");
+    throw new Error("Asset Center requires browser sign-in, but this request is non-interactive. Run an asset operation once to complete browser sign-in.");
   }
   const saved = await interactiveLogin(normalizedOrigin);
   return saved.accessToken;
 }
 
-/** 清除本机缓存令牌(登出/失效处理) */
+/** Clear locally cached credentials for sign-out or credential recovery. */
 export async function clearOAuthTokens(issuerOrigin) {
   const normalizedOrigin = issuerOrigin.replace(/\/+$/, "");
   const store = await readCredentialsFile();
