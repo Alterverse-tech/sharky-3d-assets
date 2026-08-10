@@ -72,7 +72,7 @@ The importer validates byte size, SHA-256, and the GLB header. Repeating the sam
 - Browser did not open: the authorization link is printed on stderr; open it manually, or set `ASSET_CENTER_OAUTH_NO_BROWSER=1` for headless sessions.
 - `等待浏览器授权超时`: the authorization page was not completed within 10 minutes. Re-run the request to start a fresh login.
 - `Invalid Service Token` while signed in: the stored session expired and could not refresh. Delete `~/.sharky-asset-center/credentials.json` and sign in again.
-- `Invalid Service Token`: create a new token in Asset Center and replace the local environment value.
+- Using an explicit `ASSET_CENTER_SERVICE_TOKEN` and it is rejected: create a new token in Asset Center and replace the local environment value.
 - `refusing to overwrite`: the remote asset changed after a previous import. Keep the existing package or deliberately choose a separate versioned location.
 - Catalog query failed: report the library as unavailable and retry; do not report a failed request as an empty catalog.
 - Action mismatch: a linked action's `parentAssetId` must match the selected base character before import.
