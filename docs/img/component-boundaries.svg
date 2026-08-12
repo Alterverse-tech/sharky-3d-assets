@@ -1,0 +1,99 @@
+<svg width="1200" height="544" viewBox="0 0 1200 544" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'SF Pro Rounded', 'SF Pro Text', 'PingFang SC', 'Noto Sans SC', sans-serif">
+  <rect width="1200" height="544" rx="28" fill="#FFF8F0"/>
+  <rect x="0.5" y="0.5" width="1199" height="543" rx="27.5" stroke="#F0E2D0"/>
+
+  <text x="48" y="58" font-size="22" font-weight="800" fill="#292524">三个组件的关系 · 生产 → 复用 → 集成</text>
+  <text x="48" y="84" font-size="13.5" fill="#A8A29E">One marketplace, three peer components: produce → reuse → integrate</text>
+
+  <!-- legend -->
+  <path d="M880 52 h36" stroke="#A8A29E" stroke-width="2.5" stroke-dasharray="2 7" stroke-linecap="round"/>
+  <text x="924" y="56" font-size="10.5" fill="#78716C">Skill 编排</text>
+  <path d="M1010 52 h36" stroke="#A8A29E" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="1054" y="56" font-size="10.5" fill="#78716C">资产流 GLB</text>
+
+  <!-- Card 1: rose -->
+  <g>
+    <rect x="48" y="116" width="200" height="150" rx="20" fill="#FFE4E6"/>
+    <text x="68" y="149" font-size="12.5" font-weight="700" fill="#9F1239">asset-center-</text>
+    <text x="68" y="165" font-size="12.5" font-weight="700" fill="#9F1239">character-workflow</text>
+    <rect x="68" y="175" width="134" height="21" rx="10.5" fill="#FECDD3"/>
+    <text x="135" y="189.5" font-size="10.5" font-weight="600" fill="#BE123C" text-anchor="middle">Plugin · 角色生产 · 写</text>
+    <text x="68" y="216" font-size="11" fill="#9F1239" fill-opacity="0.75">图片 → T-Pose → GLB</text>
+    <text x="68" y="234" font-size="11" fill="#9F1239" fill-opacity="0.75">→ 绑骨 → 动作 → 发布</text>
+  </g>
+  <path d="M254 191 H343 m0 0 l-9 -7 m9 7 l-9 7" stroke="#D6BFA6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="298" y="167" font-size="11" font-weight="600" fill="#78716C" text-anchor="middle">发布</text>
+  <text x="298" y="182" font-size="11" font-weight="600" fill="#78716C" text-anchor="middle">角色·动作 GLB</text>
+
+  <!-- Card 2: sky -->
+  <g>
+    <rect x="349" y="116" width="200" height="150" rx="20" fill="#DBEEFF"/>
+    <text x="369" y="152" font-size="13.5" font-weight="700" fill="#075985">Asset Center 个人云库</text>
+    <rect x="369" y="164" width="152" height="21" rx="10.5" fill="#BAE0FD"/>
+    <text x="445" y="178.5" font-size="10.5" font-weight="600" fill="#0369A1" text-anchor="middle">personal cloud library</text>
+    <text x="369" y="216" font-size="11" fill="#075985" fill-opacity="0.75">你发布过的角色、动作、</text>
+    <text x="369" y="234" font-size="11" fill="#075985" fill-opacity="0.75">模型 GLB 资产库</text>
+  </g>
+  <path d="M555 191 H644 m0 0 l-9 -7 m9 7 l-9 7" stroke="#D6BFA6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="600" y="167" font-size="11" font-weight="600" fill="#78716C" text-anchor="middle">语义召回 +</text>
+  <text x="600" y="182" font-size="11" font-weight="600" fill="#78716C" text-anchor="middle">校验导入</text>
+
+  <!-- Card 3: violet -->
+  <g>
+    <rect x="650" y="116" width="200" height="150" rx="20" fill="#EDE7FF"/>
+    <text x="670" y="149" font-size="12.5" font-weight="700" fill="#4C1D95">asset-center-</text>
+    <text x="670" y="165" font-size="12.5" font-weight="700" fill="#4C1D95">personal-assets</text>
+    <rect x="670" y="175" width="142" height="21" rx="10.5" fill="#DDD1FE"/>
+    <text x="741" y="189.5" font-size="10.5" font-weight="600" fill="#6D28D9" text-anchor="middle">Plugin · 个人库复用 · 读</text>
+    <text x="670" y="216" font-size="11" fill="#4C1D95" fill-opacity="0.75">语义召回 → 搜索预览</text>
+    <text x="670" y="234" font-size="11" fill="#4C1D95" fill-opacity="0.75">→ 确认选择 → 校验导入</text>
+  </g>
+  <path d="M856 191 H946 m0 0 l-9 -7 m9 7 l-9 7" stroke="#D6BFA6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="901" y="175" font-size="11" font-weight="600" fill="#78716C" text-anchor="middle">复用 GLB</text>
+
+  <!-- Card 4: green -->
+  <g>
+    <rect x="952" y="116" width="200" height="150" rx="20" fill="#D8F5DE"/>
+    <text x="972" y="152" font-size="13.5" font-weight="700" fill="#166534">游戏项目</text>
+    <rect x="972" y="164" width="152" height="21" rx="10.5" fill="#BBE9C6"/>
+    <text x="1048" y="178.5" font-size="10.5" font-weight="600" fill="#15803D" text-anchor="middle">Three.js / WebGL game</text>
+    <text x="972" y="216" font-size="11" fill="#166534" fill-opacity="0.8">复用 GLB + 生成 GLB</text>
+    <text x="972" y="234" font-size="11" fill="#166534" fill-opacity="0.8">+ 玩法代码</text>
+  </g>
+
+  <!-- Orchestrator bar: indigo -->
+  <g>
+    <rect x="48" y="340" width="852" height="120" rx="20" fill="#E4E9FF"/>
+    <text x="78" y="376" font-size="14.5" font-weight="700" fill="#3730A3">shark-game-assets</text>
+    <rect x="240" y="359" width="296" height="22" rx="11" fill="#C9D3FE"/>
+    <text x="388" y="374" font-size="10.5" font-weight="600" fill="#4338CA" text-anchor="middle">Skill · 编排全局 · whole-game orchestration</text>
+    <rect x="78" y="402" width="112" height="30" rx="15" fill="#FFFFFF"/>
+    <text x="134" y="421.5" font-size="11" font-weight="600" fill="#3730A3" text-anchor="middle">① 复用优先</text>
+    <path d="M198 417 h18 m0 0 l-7 -6 m7 6 l-7 6" stroke="#8B93C8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="224" y="402" width="132" height="30" rx="15" fill="#FFFFFF"/>
+    <text x="290" y="421.5" font-size="11" font-weight="600" fill="#3730A3" text-anchor="middle">② 缺口才生成</text>
+    <path d="M364 417 h18 m0 0 l-7 -6 m7 6 l-7 6" stroke="#8B93C8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="390" y="402" width="132" height="30" rx="15" fill="#FFFFFF"/>
+    <text x="456" y="421.5" font-size="11" font-weight="600" fill="#3730A3" text-anchor="middle">③ 集成进游戏</text>
+  </g>
+
+  <!-- Generation service card: amber -->
+  <g>
+    <rect x="952" y="340" width="200" height="120" rx="20" fill="#FDEBC8"/>
+    <text x="972" y="376" font-size="13.5" font-weight="700" fill="#92400E">公共生成服务</text>
+    <rect x="972" y="388" width="162" height="21" rx="10.5" fill="#FBDCA2"/>
+    <text x="1053" y="402.5" font-size="10.5" font-weight="600" fill="#B45309" text-anchor="middle">public generation service</text>
+    <text x="972" y="434" font-size="11" fill="#92400E" fill-opacity="0.8">无需账号 · 按缺口生成</text>
+  </g>
+
+  <!-- Connectors -->
+  <path d="M750 340 V274 m0 0 l-7 9 m7 -9 l7 9" stroke="#A8A29E" stroke-width="2.5" stroke-dasharray="2 7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="762" y="308" font-size="10.5" font-weight="600" fill="#78716C">复用优先 · 委托</text>
+  <path d="M908 400 H944 m0 0 l-9 -7 m9 7 l-9 7" stroke="#D6BFA6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1052 334 V274 m0 0 l-7 9 m7 -9 l7 9" stroke="#D6BFA6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="1064" y="308" font-size="10.5" font-weight="600" fill="#78716C">生成的 GLB</text>
+  <path d="M870 340 V300 H990 V274 m0 0 l-7 9 m7 -9 l7 9" stroke="#A8A29E" stroke-width="2.5" stroke-dasharray="2 7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="878" y="291" font-size="10.5" font-weight="600" fill="#78716C">集成进游戏</text>
+
+  <text x="48" y="512" font-size="12" fill="#78716C">三者互不依赖、可独立安装与更新 · 通过个人云库与游戏项目衔接成闭环：生产 → 复用 → 集成 (produce → reuse → integrate)</text>
+</svg>

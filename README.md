@@ -97,26 +97,7 @@ This repository hosts three peer components behind one marketplace (`sharky-3d-a
 
 They connect through your Asset Center library and your game project, not through each other's internals:
 
-```mermaid
-flowchart TB
-    subgraph MARKETPLACE["sharky-3d-assets — one repo · one marketplace · three peer components"]
-        direction LR
-        CHARACTER["asset-center-character-workflow<br/><b>Plugin — character production (write)</b><br/>image → T-Pose → GLB → rig → actions → publish"]
-        PERSONAL["asset-center-personal-assets<br/><b>Plugin — personal library reuse (read)</b><br/>recall → search → preview → confirm → import"]
-        SKILL["shark-game-assets<br/><b>Skill — whole-game asset pipeline</b><br/>sourcing plan → reuse first → generate gaps → integrate"]
-    end
-    AC[("Asset Center<br/>personal cloud library")]
-    GAME["Your Three.js / WebGL game project"]
-    GEN["Public generation service<br/>(no account required)"]
-
-    CHARACTER -- "publishes characters<br/>and action GLBs" --> AC
-    AC -- "semantic recall +<br/>verified import" --> PERSONAL
-    SKILL -. "delegates the reuse stage<br/>to the Plugin when installed" .-> PERSONAL
-    PERSONAL -- "reused GLBs" --> GAME
-    SKILL -- "only remaining gaps" --> GEN
-    GEN -- "generated GLBs" --> SKILL
-    SKILL -- "integrates assets +<br/>gameplay code" --> GAME
-```
+<img src="docs/img/component-boundaries.svg" alt="character-workflow 发布角色/动作 GLB 到 Asset Center 个人云库；personal-assets 语义召回并校验导入，把复用 GLB 带进游戏项目；shark-game-assets 编排全局 —— 复用优先、缺口才生成、集成进游戏" width="100%" />
 
 In short: the character-workflow Plugin **produces** characters into your library, the personal-assets Plugin **reuses** the library inside game projects, and the Skill **orchestrates** the whole game's asset pipeline — reuse first, generate only what is missing. Any one of the three works without the other two; together they close the produce → reuse → integrate loop.
 

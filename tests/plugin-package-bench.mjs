@@ -79,7 +79,7 @@ const repoReadme = readFileSync(path.join(repo, "README.md"), "utf8");
 assert.ok(repoReadme.includes("codex plugin add asset-center-character-workflow@sharky-3d-assets"));
 assert.ok(repoReadme.includes("claude plugin install asset-center-character-workflow@sharky-3d-assets"));
 assert.ok(repoReadme.includes("## Components and boundaries"));
-assert.match(repoReadme, /```mermaid/);
+assert.ok(repoReadme.includes("docs/img/component-boundaries.svg"), "boundaries section must embed the relationship diagram");
 const widget = readFileSync(path.join(pluginRoot, "web", "src", "AssetSourcingBoard.tsx"), "utf8");
 const bridge = readFileSync(path.join(pluginRoot, "web", "src", "bridge.ts"), "utf8");
 const bundle = readFileSync(path.join(pluginRoot, "web", "dist", "asset-sourcing-board.js"), "utf8");
