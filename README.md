@@ -17,7 +17,7 @@
 
 
 ```text
-/goal Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md to install the Shark Game Assets Skill and Asset Center Plugins (asset-center-personal-assets + asset-center-character-workflow), then set up a new task for me.
+/goal Read INSTALL.md to install the Shark Game Assets Skill, Asset Center Personal Assets Plugin, and Asset Center Character Workflow Plugin, then set up a new task for me.
 ```
 
 
