@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "asset_center_character_workflow": {
+      "command": "node",
+      "args": ["./scripts/asset-center-character-workflow-mcp.mjs"],
+      "cwd": ".",
+      "env_vars": [
+        "ASSET_CENTER_SERVICE_TOKEN",
+        "ASSET_CENTER_OAUTH_NO_BROWSER",
+        "ASSET_CENTER_CODEX_API_BASE_URL"
+      ]
+    }
+  }
+}

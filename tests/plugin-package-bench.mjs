@@ -16,7 +16,7 @@ const server = readFileSync(path.join(pluginRoot, "scripts", "asset-center-perso
 assert.equal(marketplace.name, "sharky-3d-assets");
 assert.equal(marketplace.plugins[0].source.path, "./plugins/asset-center-personal-assets");
 assert.equal(manifest.name, "asset-center-personal-assets");
-assert.equal(manifest.version, "0.4.8");
+assert.equal(manifest.version, "0.5.0");
 assert.deepEqual(mcp.mcpServers.asset_center_personal_assets.args, ["./scripts/plugin-bootstrap.mjs"]);
 assert.equal(claudeMarketplace.name, "sharky-3d-assets");
 assert.equal(claudeMarketplace.plugins[0].name, "asset-center-personal-assets");
@@ -30,7 +30,56 @@ assert.equal(claudeMarketplace.plugins[1].name, "shark-game-assets");
 assert.equal(claudeMarketplace.plugins[1].source, "./shark-game-assets");
 assert.equal(claudeSkillManifest.name, "shark-game-assets");
 assert.match(bootstrap, /resolveMcpServer/);
-assert.match(server, /SERVER_VERSION = "0\.4\.8"/);
+assert.match(server, /SERVER_VERSION = "0\.5\.0"/);
+
+const characterRoot = path.join(repo, "plugins", "asset-center-character-workflow");
+const characterCodexManifest = JSON.parse(readFileSync(path.join(characterRoot, ".codex-plugin", "plugin.json"), "utf8"));
+const characterClaudeManifest = JSON.parse(readFileSync(path.join(characterRoot, ".claude-plugin", "plugin.json"), "utf8"));
+const characterMcp = JSON.parse(readFileSync(path.join(characterRoot, ".mcp.json"), "utf8"));
+const characterServer = readFileSync(path.join(characterRoot, "scripts", "asset-center-character-workflow-mcp.mjs"), "utf8");
+const characterSkill = readFileSync(
+  path.join(characterRoot, "skills", "asset-center-character-workflow", "SKILL.md"),
+  "utf8"
+);
+
+assert.equal(characterCodexManifest.name, "asset-center-character-workflow");
+assert.equal(characterClaudeManifest.name, "asset-center-character-workflow");
+assert.equal(characterClaudeManifest.version, characterCodexManifest.version);
+assert.deepEqual(characterMcp.mcpServers.asset_center_character_workflow.args, [
+  "./scripts/asset-center-character-workflow-mcp.mjs"
+]);
+assert.deepEqual(characterClaudeManifest.mcpServers.asset_center_character_workflow.args, [
+  "${CLAUDE_PLUGIN_ROOT}/scripts/asset-center-character-workflow-mcp.mjs"
+]);
+assert.match(characterServer, new RegExp(`SERVER_VERSION = "${characterCodexManifest.version.replaceAll(".", "\\.")}"`));
+assert.ok(
+  characterSkill.includes(`This loaded bundle is version \`${characterCodexManifest.version}\`.`),
+  "character SKILL.md must state the packaged bundle version"
+);
+assert.ok(!characterSkill.includes("asset-center-local"), "character SKILL.md must point update checks at sharky-3d-assets");
+assert.ok(characterSkill.includes("asset-center-character-workflow@sharky-3d-assets"));
+
+const characterAgentsEntry = marketplace.plugins.find((entry) => entry.name === "asset-center-character-workflow");
+assert.ok(characterAgentsEntry, "Codex marketplace must list asset-center-character-workflow");
+assert.equal(characterAgentsEntry.source.path, "./plugins/asset-center-character-workflow");
+assert.equal(
+  characterAgentsEntry.version,
+  characterCodexManifest.version,
+  "Codex marketplace entry must carry the version the SKILL.md update check reads"
+);
+const characterClaudeEntry = claudeMarketplace.plugins.find((entry) => entry.name === "asset-center-character-workflow");
+assert.ok(characterClaudeEntry, "Claude marketplace must list asset-center-character-workflow");
+assert.equal(characterClaudeEntry.source, "./plugins/asset-center-character-workflow");
+assert.equal(characterClaudeEntry.version, characterCodexManifest.version);
+
+const install = readFileSync(path.join(repo, "INSTALL.md"), "utf8");
+assert.ok(install.includes("codex plugin add asset-center-character-workflow@sharky-3d-assets --json"));
+assert.ok(install.includes("claude plugin install asset-center-character-workflow@sharky-3d-assets"));
+const repoReadme = readFileSync(path.join(repo, "README.md"), "utf8");
+assert.ok(repoReadme.includes("codex plugin add asset-center-character-workflow@sharky-3d-assets"));
+assert.ok(repoReadme.includes("claude plugin install asset-center-character-workflow@sharky-3d-assets"));
+assert.ok(repoReadme.includes("## Components and boundaries"));
+assert.match(repoReadme, /```mermaid/);
 const widget = readFileSync(path.join(pluginRoot, "web", "src", "AssetSourcingBoard.tsx"), "utf8");
 const bridge = readFileSync(path.join(pluginRoot, "web", "src", "bridge.ts"), "utf8");
 const bundle = readFileSync(path.join(pluginRoot, "web", "dist", "asset-sourcing-board.js"), "utf8");

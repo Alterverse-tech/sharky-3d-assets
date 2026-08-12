@@ -1,0 +1,28 @@
+{
+  "name": "asset-center-character-workflow",
+  "version": "0.4.0",
+  "description": "Create and advance human character models in the browser-hosted Asset Center workbench from Codex Desktop.",
+  "author": {
+    "name": "Shark Studio"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Asset Center Character Workflow",
+    "shortDescription": "Turn a selected character image into a production workflow.",
+    "longDescription": "Discuss and select a human character reference in Codex, generate a native T-Pose, then import, inspect, and advance it in the same owner-scoped Asset Center Character Workbench workflow.",
+    "developerName": "Shark Studio",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Human character reference intake",
+      "Codex-native T-Pose generation and import",
+      "T-Pose and GLB production orchestration",
+      "Rigging and action workflow control",
+      "Shared Codex and browser workflow state"
+    ],
+    "defaultPrompt": [
+      "Create a football anime boy character model.",
+      "Use my attached human reference to make a rigged model."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

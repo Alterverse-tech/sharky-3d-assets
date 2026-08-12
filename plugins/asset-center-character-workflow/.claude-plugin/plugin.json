@@ -1,0 +1,17 @@
+{
+  "name": "asset-center-character-workflow",
+  "version": "0.4.0",
+  "description": "Create and advance human character models in the browser-hosted Asset Center workbench from Claude Code.",
+  "author": {
+    "name": "Shark Studio"
+  },
+  "homepage": "https://github.com/Alterverse-tech/sharky-3d-assets",
+  "repository": "https://github.com/Alterverse-tech/sharky-3d-assets",
+  "keywords": ["3d", "character", "t-pose", "glb", "rigging", "asset-center"],
+  "mcpServers": {
+    "asset_center_character_workflow": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/asset-center-character-workflow-mcp.mjs"]
+    }
+  }
+}

@@ -15,7 +15,13 @@
       "homepage": "https://github.com/Alterverse-tech/sharky-3d-assets",
       "repository": "https://github.com/Alterverse-tech/sharky-3d-assets",
       "category": "developer-tools",
-      "keywords": ["3d", "glb", "game-assets", "asset-center", "threejs"]
+      "keywords": [
+        "3d",
+        "glb",
+        "game-assets",
+        "asset-center",
+        "threejs"
+      ]
     },
     {
       "name": "shark-game-assets",
@@ -27,7 +33,33 @@
       "homepage": "https://github.com/Alterverse-tech/sharky-3d-assets",
       "repository": "https://github.com/Alterverse-tech/sharky-3d-assets",
       "category": "developer-tools",
-      "keywords": ["3d", "glb", "game-assets", "threejs", "tripo"]
+      "keywords": [
+        "3d",
+        "glb",
+        "game-assets",
+        "threejs",
+        "tripo"
+      ]
+    },
+    {
+      "name": "asset-center-character-workflow",
+      "source": "./plugins/asset-center-character-workflow",
+      "description": "Create and advance human character models in the shared Asset Center Character Workbench — image to T-Pose, GLB, rig, actions, and publish.",
+      "version": "0.4.0",
+      "author": {
+        "name": "Shark Studio"
+      },
+      "homepage": "https://github.com/Alterverse-tech/sharky-3d-assets",
+      "repository": "https://github.com/Alterverse-tech/sharky-3d-assets",
+      "category": "developer-tools",
+      "keywords": [
+        "3d",
+        "character",
+        "t-pose",
+        "glb",
+        "rigging",
+        "asset-center"
+      ]
     }
   ]
 }

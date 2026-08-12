@@ -4,12 +4,13 @@ This document is an installation contract for coding agents. Follow it when the 
 
 ## What you will install
 
-Install both existing components without changing their runtime logic:
+Install these existing components without changing their runtime logic:
 
 - the global `shark-game-assets` Skill;
-- the `asset-center-personal-assets` Codex Plugin from the `sharky-3d-assets` marketplace.
+- the `asset-center-personal-assets` Codex Plugin from the `sharky-3d-assets` marketplace;
+- the `asset-center-character-workflow` Codex Plugin from the `sharky-3d-assets` marketplace.
 
-Tell the user that these are two components installed through one guided flow. Request normal command approval when the environment requires it.
+Tell the user that these are three components installed through one guided flow. Request normal command approval when the environment requires it.
 
 ## Safety rules
 
@@ -39,8 +40,9 @@ Use exact component identities when reading the results:
 - Skill: `shark-game-assets`
 - Marketplace: `sharky-3d-assets`
 - Plugin: `asset-center-personal-assets` from marketplace `sharky-3d-assets`
+- Plugin: `asset-center-character-workflow` from marketplace `sharky-3d-assets`
 
-If an identity exists but points to a different source, stop and report the conflict. Do not replace it automatically.
+If an identity exists but points to a different source, stop and report the conflict. Do not replace it automatically. In particular, if `asset-center-character-workflow` is already installed from the retired `asset-center-local` marketplace, report that a manual migration to `sharky-3d-assets` is available and leave the existing installation unchanged.
 
 ## 3. Install only missing components
 
@@ -56,10 +58,14 @@ If the marketplace is missing, run:
 codex plugin marketplace add Alterverse-tech/sharky-3d-assets --ref main --json
 ```
 
-If the Plugin is missing, run this only after the marketplace is available:
+If a Plugin is missing, run the matching command only after the marketplace is available:
 
 ```bash
 codex plugin add asset-center-personal-assets@sharky-3d-assets --json
+```
+
+```bash
+codex plugin add asset-center-character-workflow@sharky-3d-assets --json
 ```
 
 Leave an already installed component unchanged. If one installation fails, keep any component that installed successfully and report the result as partial installation.
@@ -78,13 +84,14 @@ Report separate results for:
 
 1. `shark-game-assets` Skill;
 2. `sharky-3d-assets` marketplace;
-3. `asset-center-personal-assets` Plugin.
+3. `asset-center-personal-assets` Plugin;
+4. `asset-center-character-workflow` Plugin.
 
-Do not report complete success unless all three are present with the expected identities.
+Do not report complete success unless all four are present with the expected identities.
 
 ## Claude Code installation
 
-Claude Code installs the same two components with its own plugin CLI. All safety rules above apply unchanged, including exact component identities and no silent repair of conflicts.
+Claude Code installs the same three components with its own plugin CLI. All safety rules above apply unchanged, including exact component identities and no silent repair of conflicts.
 
 ### 1. Check prerequisites
 
@@ -100,7 +107,7 @@ claude plugin marketplace list
 claude plugin list
 ```
 
-Use the same component identities: Skill `shark-game-assets`, marketplace `sharky-3d-assets`, plugin `asset-center-personal-assets` from marketplace `sharky-3d-assets`. The Skill counts as present when it appears either as a global skills-CLI installation (`npx skills list -g`) or as the Claude plugin `shark-game-assets@sharky-3d-assets`; never install both variants.
+Use the same component identities: Skill `shark-game-assets`, marketplace `sharky-3d-assets`, plugins `asset-center-personal-assets` and `asset-center-character-workflow` from marketplace `sharky-3d-assets`. The Skill counts as present when it appears either as a global skills-CLI installation (`npx skills list -g`) or as the Claude plugin `shark-game-assets@sharky-3d-assets`; never install both variants.
 
 ### 3. Install only missing components
 
@@ -116,18 +123,22 @@ If the Skill is missing in both forms, run this after the marketplace is availab
 claude plugin install shark-game-assets@sharky-3d-assets
 ```
 
-If the Plugin is missing, run this only after the marketplace is available:
+If a Plugin is missing, run the matching command only after the marketplace is available:
 
 ```bash
 claude plugin install asset-center-personal-assets@sharky-3d-assets
 ```
 
+```bash
+claude plugin install asset-center-character-workflow@sharky-3d-assets
+```
+
 ### 4. Verify and report
 
-Run the state checks from step 2 again and report separate results for the Skill, the marketplace, and the Plugin, following the same partial-installation rules as the Codex flow.
+Run the state checks from step 2 again and report separate results for the Skill, the marketplace, and both Plugins, following the same partial-installation rules as the Codex flow.
 
 ## Authentication boundary
 
-The public Shark Game Assets generation workflow does not require a token. Personal Asset Center access requires `ASSET_CENTER_SERVICE_TOKEN` to be configured locally in the environment that launches Codex. Installation does not require its value and must not request it in chat.
+The public Shark Game Assets generation workflow does not require a token. Personal Asset Center access — both the personal-assets Plugin and the character-workflow Plugin — signs in through Asset Center OAuth in the browser on first use, or uses an `ASSET_CENTER_SERVICE_TOKEN` already configured locally in the environment that launches Codex. Installation does not require a token value and must not request it in chat.
 
 After successful installation, ask the user to start a new task in the installing agent — a new Codex task or a new Claude Code session — so the newly installed Skill and Plugin tools are discovered.

@@ -16,7 +16,7 @@
 
 
 ```text
-/goal Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md to install the Shark Game Assets Skill and Asset Center Plugin, then set up a new task for me.
+/goal Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md to install the Shark Game Assets Skill and Asset Center Plugins, then set up a new task for me.
 ```
 
 
@@ -83,6 +83,41 @@ Agent integrates everything into a playable Three.js/WebGL game
 
 <img src="docs/img/progress-md.svg" alt="animation-plan-progress.md with live per-row status and GLB links" width="100%" />
 
+## Components and boundaries
+
+This repository hosts three peer components behind one marketplace (`sharky-3d-assets`). Each lives in its own directory, is versioned independently, and can be installed or updated on its own:
+
+| Component | Type | Owns | Stays out of | Auth |
+|---|---|---|---|---|
+| `shark-game-assets` | Skill | Whole-game asset orchestration: action-plan confirmation, reuse-before-generate sourcing, gap generation through the public service, game integration and publishing | Personal library contents; character production stages | None (public service) |
+| `asset-center-personal-assets` | Plugin (MCP) | The read side of your personal Asset Center library: semantic recall, search, preview, confirmed selection, verified local import | Generating new assets; writing to the library | Asset Center OAuth / service token |
+| `asset-center-character-workflow` | Plugin (MCP) | The write side of character production: reference image → T-Pose → GLB → rig check → actions → publish into your Asset Center library, shared live with the browser Workbench | Game integration; non-character assets; creature rigs (bipeds only) | Asset Center OAuth / service token |
+
+They connect through your Asset Center library and your game project, not through each other's internals:
+
+```mermaid
+flowchart TB
+    subgraph MARKETPLACE["sharky-3d-assets — one repo · one marketplace · three peer components"]
+        direction LR
+        CHARACTER["asset-center-character-workflow<br/><b>Plugin — character production (write)</b><br/>image → T-Pose → GLB → rig → actions → publish"]
+        PERSONAL["asset-center-personal-assets<br/><b>Plugin — personal library reuse (read)</b><br/>recall → search → preview → confirm → import"]
+        SKILL["shark-game-assets<br/><b>Skill — whole-game asset pipeline</b><br/>sourcing plan → reuse first → generate gaps → integrate"]
+    end
+    AC[("Asset Center<br/>personal cloud library")]
+    GAME["Your Three.js / WebGL game project"]
+    GEN["Public generation service<br/>(no account required)"]
+
+    CHARACTER -- "publishes characters<br/>and action GLBs" --> AC
+    AC -- "semantic recall +<br/>verified import" --> PERSONAL
+    SKILL -. "delegates the reuse stage<br/>to the Plugin when installed" .-> PERSONAL
+    PERSONAL -- "reused GLBs" --> GAME
+    SKILL -- "only remaining gaps" --> GEN
+    GEN -- "generated GLBs" --> SKILL
+    SKILL -- "integrates assets +<br/>gameplay code" --> GAME
+```
+
+In short: the character-workflow Plugin **produces** characters into your library, the personal-assets Plugin **reuses** the library inside game projects, and the Skill **orchestrates** the whole game's asset pipeline — reuse first, generate only what is missing. Any one of the three works without the other two; together they close the produce → reuse → integrate loop.
+
 ## Installation
 
 ### Install with one prompt in Codex or Claude Code
@@ -93,7 +128,7 @@ Paste this into any Codex task or Claude Code session:
 Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md and install Shark Game Assets for me.
 ```
 
-The agent checks what is already installed, adds only the missing Skill or Plugin components, verifies both results, and asks you to start a new task.
+The agent checks what is already installed, adds only the missing Skill or Plugin components (including the character-workflow Plugin), verifies each result separately, and asks you to start a new task.
 
 ### Manual installation
 
@@ -127,6 +162,26 @@ To add the Asset Center Plugin to Claude Code:
 claude plugin marketplace add Alterverse-tech/sharky-3d-assets
 claude plugin install asset-center-personal-assets@sharky-3d-assets
 ```
+
+### Character Workflow Plugin (standalone)
+
+`asset-center-character-workflow` turns a discussed or attached human reference into a production character — T-Pose, GLB, rig check, action retargeting, and publishing — in the same owner-scoped workflow as the browser-hosted Character Workbench. It installs on its own; neither the Skill nor the personal-assets Plugin is required.
+
+To add it to Codex:
+
+```bash
+codex plugin marketplace add Alterverse-tech/sharky-3d-assets --ref main
+codex plugin add asset-center-character-workflow@sharky-3d-assets
+```
+
+To add it to Claude Code:
+
+```bash
+claude plugin marketplace add Alterverse-tech/sharky-3d-assets
+claude plugin install asset-center-character-workflow@sharky-3d-assets
+```
+
+If a marketplace `add` says `sharky-3d-assets` already exists, skip that line and run only the plugin install. Earlier installations from the retired `asset-center-local` marketplace keep working; to migrate, remove that plugin and marketplace with the same CLI, then install `asset-center-character-workflow@sharky-3d-assets`. See [plugins/asset-center-character-workflow/README.md](plugins/asset-center-character-workflow/README.md) for the full workflow description.
 
 Set `ASSET_CENTER_SERVICE_TOKEN` in the environment that launches Codex or Claude Code. The Plugin is independent, but when `shark-game-assets` reaches its reuse-before-generation sourcing stage, the personal-assets tools and native selection board become the default reuse path.
 
