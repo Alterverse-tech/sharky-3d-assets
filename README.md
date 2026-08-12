@@ -16,7 +16,7 @@
 
 
 ```text
-/goal Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md to install the Shark Game Assets Skill and Asset Center Plugins, then set up a new task for me.
+/goal Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md to install the Shark Game Assets Skill and Asset Center Plugins (asset-center-personal-assets + asset-center-character-workflow), then set up a new task for me.
 ```
 
 
@@ -125,7 +125,7 @@ In short: the character-workflow Plugin **produces** characters into your librar
 Paste this into any Codex task or Claude Code session:
 
 ```text
-Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md and install Shark Game Assets for me.
+Read https://raw.githubusercontent.com/Alterverse-tech/sharky-3d-assets/main/INSTALL.md to install the Shark Game Assets Skill and Asset Center Plugins (asset-center-personal-assets + asset-center-character-workflow), then set up a new task for me.
 ```
 
 The agent checks what is already installed, adds only the missing Skill or Plugin components (including the character-workflow Plugin), verifies each result separately, and asks you to start a new task.
