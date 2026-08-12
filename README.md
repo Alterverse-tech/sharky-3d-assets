@@ -169,6 +169,21 @@ claude plugin install asset-center-personal-assets@sharky-3d-assets
 
 `asset-center-character-workflow` turns a discussed or attached human reference into a production character — T-Pose, GLB, rig check, action retargeting, and publishing — in the same owner-scoped workflow as the browser-hosted Character Workbench. It installs on its own; neither the Skill nor the personal-assets Plugin is required.
 
+One workflow run, three deliverables — from a confirmed reference to a reusable library card:
+
+<table>
+  <tr>
+    <td width="40%" align="center"><img src="docs/img/character-workflow-tpose.png" alt="Boar-head dual-blade character as a static GLB in native T-Pose" width="100%"></td>
+    <td width="32%" align="center"><img src="docs/img/character-workflow-action.png" alt="The same rigged character playing a retargeted action clip" width="100%"></td>
+    <td width="28%" align="center"><img src="docs/img/character-workflow-card.png" alt="Published Asset Center card: 野猪头双刀角色, GLB, 843 KB" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>静态主体 GLB · T-Pose</b><br>static character model in native T-Pose</sub></td>
+    <td align="center"><sub><b>动作 GLB · retarget 动作预览</b><br>rigged action clip after retargeting</sub></td>
+    <td align="center"><sub><b>Asset Center 卡片</b><br>published card, ready for reuse by <code>personal-assets</code></sub></td>
+  </tr>
+</table>
+
 To add it to Codex:
 
 ```bash
