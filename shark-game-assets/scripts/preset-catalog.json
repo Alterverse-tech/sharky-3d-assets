@@ -2,7 +2,7 @@
   "version": 1,
   "schema": "shark-game-assets-preset-catalog",
   "source": "https://developers.tripo3d.ai/zh/docs/animations-retarget",
-  "budget": { "tripoPresetsPerKeyAsset": 3 },
+  "budget": { "tripoPresetsPerKeyAsset": 5, "tripoPresetsPerSecondaryAsset": 1 },
   "defaultPresets": ["preset:biped:walk"],
   "rigModels": {
     "v1.0-20240301": {

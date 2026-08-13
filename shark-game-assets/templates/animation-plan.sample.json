@@ -4,7 +4,7 @@
   "runId": "escape-clocktower-20260801-01",
   "createdAt": "2026-08-01T10:00:00.000Z",
   "gameSummary": "Third-person escape: a detective flees a clocktower while a patrol guard hunts the halls and a watch-shark circles the flooded cellar.",
-  "budget": { "tripoPresetsPerKeyAsset": 3 },
+  "budget": { "tripoPresetsPerKeyAsset": 5, "tripoPresetsPerSecondaryAsset": 1 },
   "confirmation": {
     "confirmed": true,
     "confirmedBy": "user",

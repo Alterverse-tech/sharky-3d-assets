@@ -19,7 +19,7 @@ export function deriveAssetPlans(plan) {
     schema: "shark-game-assets-animation-plan",
     runId: plan.runId,
     createdAt: plan.confirmation.confirmedAt,
-    budget: { tripoPresetsPerKeyAsset: 3 },
+    budget: { tripoPresetsPerKeyAsset: 5, tripoPresetsPerSecondaryAsset: 1 },
     confirmation: { ...plan.confirmation },
     assets: [],
   };

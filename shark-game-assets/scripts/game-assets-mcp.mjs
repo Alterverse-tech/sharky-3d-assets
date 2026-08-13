@@ -160,10 +160,10 @@ const TOOL_DEFINITIONS = [
               },
               animations: {
                 type: "array",
-                maxItems: 3,
+                maxItems: 5,
                 items: { type: "string" },
                 description:
-                  "Confirmed Tripo retarget presets for this character/creature (max 3), from scripts/preset-catalog.json and the user-confirmed action requirements list. Omit for the default walk-only rig. Ignored on the tripo route."
+                  "Confirmed Tripo retarget presets for this character/creature (max 5), from scripts/preset-catalog.json and the user-confirmed action requirements list. Omit for the default walk-only rig. Ignored on the tripo route."
               }
             },
             required: ["id", "role", "name", "prompt"]
@@ -294,7 +294,7 @@ async function handleMessage(message) {
       capabilities: { tools: {} },
       serverInfo: SERVER_INFO,
       instructions:
-        "Use this server only for key GLB assets in 3D games. Pass cwd as the current project directory. Generate 1-3 essential assets, reuse asset_manifest.json by default, and keep primitive fallbacks. The gemini_reference route automatically rigs character/creature GLBs; retarget success returns separate animationClips and retarget failure may return main-GLB procedural_native_clips. For existing-GLB animation, Tripo retarget must be one preset per request; the default biped clip is walk only, any other catalog preset is an explicit option gated by a user-confirmed action requirements list, and each successful retarget clip should be recorded as a separate animationClips GLB. Runtime idle belongs on the character visual child, not in the default GLB."
+        "Use this server only for key GLB assets in 3D games. Pass cwd as the current project directory. Generate 1-5 essential assets, reuse asset_manifest.json by default, and keep primitive fallbacks. The gemini_reference route automatically rigs character/creature GLBs; retarget success returns separate animationClips and retarget failure may return main-GLB procedural_native_clips. For existing-GLB animation, Tripo retarget must be one preset per request; the default biped clip is walk only, any other catalog preset is an explicit option gated by a user-confirmed action requirements list, and each successful retarget clip should be recorded as a separate animationClips GLB. Runtime idle belongs on the character visual child, not in the default GLB."
     });
     return;
   }
@@ -1022,14 +1022,14 @@ function normalizeAssets(value, route) {
     .slice(0, 4);
 }
 
-// Confirmed per-asset retarget presets for the generate call (max 3, catalog
+// Confirmed per-asset retarget presets for the generate call (max 5, catalog
 // members only). The animation-plan validator guarantees membership upstream;
 // this is a lenient last-line filter so a stray value cannot spend credits.
 function normalizeGenerateAnimations(value) {
   if (!Array.isArray(value)) return undefined;
   const allowed = new Set(RIG_CLIP_PRESET_ENUM);
   const presets = [...new Set(value.map((preset) => String(preset).trim()).filter(Boolean))].filter((preset) => allowed.has(preset));
-  return presets.length ? presets.slice(0, 3) : undefined;
+  return presets.length ? presets.slice(0, 5) : undefined;
 }
 
 function selectRoute(value, args) {

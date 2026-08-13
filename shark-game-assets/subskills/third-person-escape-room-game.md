@@ -71,8 +71,8 @@ Use this subskill when the user asks to generate, regenerate, or substantially r
 ## 3D Asset Use
 
 - Use the parent `shark-game-assets` rules for GLB generation, manifest handling, fallbacks, and live regeneration preview.
-- For key entity characters and story-critical entity props, use the Gemini-Tripo branch (`route: "gemini_reference"`) and keep the count to 1-5 models total.
-- For secondary static props, use `route: "tripo"` and keep the count to 3-10 models total only when those props materially improve gameplay readability.
+- For key entity characters and story-critical entity props, use the Gemini-Tripo branch (`route: "gemini_reference"`) and keep the count to 1-8 models total.
+- For secondary static props, use `route: "tripo"` and keep the count to 3-15 models total only when those props materially improve gameplay readability.
 - Do not reuse historical GLBs when the user explicitly asks for regeneration without reuse.
 - Wire generated assets into the game using `GLTFLoader`, normalize them with a stable scale/grounding pass, and keep primitive fallbacks.
 

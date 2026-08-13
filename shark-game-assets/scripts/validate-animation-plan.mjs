@@ -59,10 +59,14 @@ if (plan && catalog) {
     );
   }
 
-  const defaultBudget = Number.isInteger(catalog.budget?.tripoPresetsPerKeyAsset) ? catalog.budget.tripoPresetsPerKeyAsset : 3;
+  const defaultBudget = Number.isInteger(catalog.budget?.tripoPresetsPerKeyAsset) ? catalog.budget.tripoPresetsPerKeyAsset : 5;
   const budget = Number.isInteger(plan.budget?.tripoPresetsPerKeyAsset) && plan.budget.tripoPresetsPerKeyAsset >= 0
     ? plan.budget.tripoPresetsPerKeyAsset
     : defaultBudget;
+  const defaultSecondaryBudget = Number.isInteger(catalog.budget?.tripoPresetsPerSecondaryAsset) ? catalog.budget.tripoPresetsPerSecondaryAsset : 1;
+  const secondaryBudget = Number.isInteger(plan.budget?.tripoPresetsPerSecondaryAsset) && plan.budget.tripoPresetsPerSecondaryAsset >= 0
+    ? plan.budget.tripoPresetsPerSecondaryAsset
+    : defaultSecondaryBudget;
 
   if (!Array.isArray(plan.assets) || !plan.assets.length) errors.push(`${planFile}: assets must be non-empty`);
 
@@ -88,10 +92,11 @@ if (plan && catalog) {
     }
 
     // Budget overflow is not a hard failure: confirmed order is priority order,
-    // so Tripo actions beyond the asset's budget (key: `budget`, secondary: 0)
-    // degrade in place to the procedural tier with an explicit marker. This is
-    // the L1->L2 step of the action degradation chain, applied at plan level.
-    const assetBudget = asset.tier === "key" ? budget : 0;
+    // so Tripo actions beyond the asset's budget (key: `budget`, secondary:
+    // `secondaryBudget`) degrade in place to the procedural tier with an
+    // explicit marker. This is the L1->L2 step of the action degradation
+    // chain, applied at plan level.
+    const assetBudget = asset.tier === "key" ? budget : secondaryBudget;
     let tripoSeen = 0;
     for (const action of asset.actions) {
       if (action?.source !== "tripo") continue;
@@ -143,7 +148,7 @@ if (plan && catalog) {
     tripoTotal += tripoCount;
   }
 
-  summary = { assets: (plan.assets || []).length, tripoPresets: tripoTotal, budgetPerKeyAsset: budget };
+  summary = { assets: (plan.assets || []).length, tripoPresets: tripoTotal, budgetPerKeyAsset: budget, budgetPerSecondaryAsset: secondaryBudget };
 }
 
 // Persist the degraded plan so downstream derivation (generate params,
