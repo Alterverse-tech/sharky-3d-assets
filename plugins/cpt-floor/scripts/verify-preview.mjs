@@ -129,6 +129,7 @@ export async function verifyPreview(options) {
       if (exited) throw new Error(`dev server exited before readiness; inspect ${logFile}`);
       await wait(100);
     }
+    try { process.kill(child.pid, "SIGTERM"); } catch {}
     throw new Error(`dev server readiness timed out; inspect ${logFile}`);
   }
   throw new Error(`no matching or free preview port in ${options.port}-${options.maxPort}`);

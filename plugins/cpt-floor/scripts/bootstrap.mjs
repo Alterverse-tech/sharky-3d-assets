@@ -193,11 +193,37 @@ async function resolveWorkspace(options) {
   return path.join(os.homedir(), "CPT-Tower-Floors", `${options.floor}-${options.key}`);
 }
 
+async function ensureFloor(root, options, floorFile) {
+  const absoluteFloorFile = path.join(root, floorFile);
+  if (await exists(absoluteFloorFile)) {
+    const meta = readFloorMetadata(await readFile(absoluteFloorFile, "utf8"));
+    if (meta.floor !== options.floor || meta.key !== options.key || meta.name !== options.name) {
+      throw new Error(`existing floor metadata does not match request: ${floorFile}`);
+    }
+    return;
+  }
+  await execFile(process.execPath, [
+    "tools/new-floor.mjs",
+    String(options.floor),
+    options.name,
+    "--key",
+    options.key,
+    "--author",
+    options.author,
+  ], { cwd: root, maxBuffer: 8 * 1024 * 1024 });
+  if (!(await exists(absoluteFloorFile))) throw new Error(`scaffolder did not create ${floorFile}`);
+}
+
 export async function bootstrap(options) {
   const workspace = await resolveWorkspace(options);
   const workspaceExists = await exists(workspace);
   const reusable = workspaceExists && await isKitWorkspace(workspace);
   if (workspaceExists && !reusable) throw new Error(`workspace exists but is not a valid developer kit: ${workspace}`);
+
+  const floorFile = `floors/${options.floor}F-${options.key}.js`;
+  if (reusable && await exists(path.join(workspace, floorFile))) {
+    await ensureFloor(workspace, options, floorFile);
+  }
 
   const tokens = reusable ? await readTokens(workspace) : {};
   const registry = await fetchJson(`${options.hub}/api/registry`);
@@ -217,31 +243,15 @@ export async function bootstrap(options) {
 
     if (reusable) {
       await refreshKit(stagedKit, workspace);
+      await ensureFloor(workspace, options, floorFile);
     } else {
+      await ensureFloor(stagedKit, options, floorFile);
       await mkdir(path.dirname(workspace), { recursive: true });
       if (await exists(workspace)) throw new Error(`workspace appeared during setup: ${workspace}`);
       await rename(stagedKit, workspace);
     }
 
-    const floorFile = `floors/${options.floor}F-${options.key}.js`;
     const absoluteFloorFile = path.join(workspace, floorFile);
-    if (await exists(absoluteFloorFile)) {
-      const meta = readFloorMetadata(await readFile(absoluteFloorFile, "utf8"));
-      if (meta.floor !== options.floor || meta.key !== options.key || meta.name !== options.name) {
-        throw new Error(`existing floor metadata does not match request: ${floorFile}`);
-      }
-    } else {
-      await execFile(process.execPath, [
-        "tools/new-floor.mjs",
-        String(options.floor),
-        options.name,
-        "--key",
-        options.key,
-        "--author",
-        options.author,
-      ], { cwd: workspace, maxBuffer: 8 * 1024 * 1024 });
-      if (!(await exists(absoluteFloorFile))) throw new Error(`scaffolder did not create ${floorFile}`);
-    }
 
     return {
       workspace,
