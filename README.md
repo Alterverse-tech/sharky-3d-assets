@@ -74,6 +74,7 @@ The one-prompt install at the top covers everything. To install manually, add th
 codex plugin marketplace add Alterverse-tech/sharky-3d-assets --ref main
 codex plugin add asset-center-personal-assets@sharky-3d-assets
 codex plugin add asset-center-character-workflow@sharky-3d-assets
+codex plugin add cpt-floor@sharky-3d-assets
 npx skills add https://github.com/Alterverse-tech/sharky-3d-assets --skill shark-game-assets -g
 ```
 
@@ -84,9 +85,20 @@ claude plugin marketplace add Alterverse-tech/sharky-3d-assets
 claude plugin install shark-game-assets@sharky-3d-assets
 claude plugin install asset-center-personal-assets@sharky-3d-assets
 claude plugin install asset-center-character-workflow@sharky-3d-assets
+claude plugin install cpt-floor@sharky-3d-assets
 ```
 
 Notes: the skills-CLI install (`npx skills add … -g`) serves Codex and Claude Code at once — if you use it, skip `shark-game-assets@sharky-3d-assets` (never install both variants). A marketplace `add` that says `sharky-3d-assets` already exists is fine — run only the installs. Migrating `asset-center-character-workflow` from the retired `asset-center-local` marketplace: remove that plugin and marketplace, then install from `sharky-3d-assets` ([details](plugins/asset-center-character-workflow/README.md)).
+
+### Central Park Tower floor authoring
+
+After installing `cpt-floor`, use the same prompt in Codex or Claude Code:
+
+```text
+$cpt-floor 给30楼建一个羽毛球馆
+```
+
+The Skill downloads the current author kit, prepares an isolated workspace, validates the floor, and returns a verified hot-reload preview. It claims or publishes the floor only when you explicitly ask.
 
 ### Character Workflow in action
 

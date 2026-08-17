@@ -46,4 +46,9 @@ assert.ok(skill.split("\n").length < 500);
 assert.match(openai, /default_prompt: "Use \$cpt-floor /);
 assert.match(reference, /floors\/\*\.js/);
 
+const readme = readFileSync(path.join(repo, "README.md"), "utf8");
+assert.match(readme, /codex plugin add cpt-floor@sharky-3d-assets/);
+assert.match(readme, /claude plugin install cpt-floor@sharky-3d-assets/);
+assert.match(readme, /\$cpt-floor 给30楼建一个羽毛球馆/);
+
 process.stdout.write("cpt-floor plugin bench passed\n");
