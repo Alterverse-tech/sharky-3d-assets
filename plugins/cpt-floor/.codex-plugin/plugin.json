@@ -1,0 +1,23 @@
+{
+  "name": "cpt-floor",
+  "version": "0.1.0",
+  "description": "Build, validate, preview, and publish independently authored Central Park Tower floors.",
+  "author": {
+    "name": "Shark Studio"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "CPT Floor",
+    "shortDescription": "Build one Central Park Tower floor.",
+    "longDescription": "Create or update a tower floor from the latest developer kit, validate it, open a verified local preview, and publish only after confirmation.",
+    "developerName": "Shark Studio",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Download and refresh the floor developer kit",
+      "Create and update isolated floor workspaces",
+      "Validate and preview floor modules",
+      "Claim and publish after explicit approval"
+    ],
+    "defaultPrompt": "Use $cpt-floor to build a new Central Park Tower floor."
+  }
+}

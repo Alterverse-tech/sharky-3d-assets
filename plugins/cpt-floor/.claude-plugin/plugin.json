@@ -1,0 +1,16 @@
+{
+  "name": "cpt-floor",
+  "version": "0.1.0",
+  "description": "Build, validate, preview, and publish independently authored Central Park Tower floors.",
+  "author": {
+    "name": "Shark Studio"
+  },
+  "homepage": "https://github.com/Alterverse-tech/sharky-3d-assets",
+  "repository": "https://github.com/Alterverse-tech/sharky-3d-assets",
+  "keywords": [
+    "threejs",
+    "tower",
+    "floor-plugin",
+    "game-development"
+  ]
+}
