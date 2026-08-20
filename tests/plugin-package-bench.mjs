@@ -16,7 +16,7 @@ const server = readFileSync(path.join(pluginRoot, "scripts", "asset-center-perso
 assert.equal(marketplace.name, "sharky-3d-assets");
 assert.equal(marketplace.plugins[0].source.path, "./plugins/asset-center-personal-assets");
 assert.equal(manifest.name, "asset-center-personal-assets");
-assert.equal(manifest.version, "0.5.0");
+assert.equal(manifest.version, "0.5.1");
 assert.deepEqual(mcp.mcpServers.asset_center_personal_assets.args, ["./scripts/plugin-bootstrap.mjs"]);
 assert.equal(claudeMarketplace.name, "sharky-3d-assets");
 assert.equal(claudeMarketplace.plugins[0].name, "asset-center-personal-assets");
@@ -30,7 +30,7 @@ assert.equal(claudeMarketplace.plugins[1].name, "shark-game-assets");
 assert.equal(claudeMarketplace.plugins[1].source, "./shark-game-assets");
 assert.equal(claudeSkillManifest.name, "shark-game-assets");
 assert.match(bootstrap, /resolveMcpServer/);
-assert.match(server, /SERVER_VERSION = "0\.5\.0"/);
+assert.match(server, /SERVER_VERSION = "0\.5\.1"/);
 
 const characterRoot = path.join(repo, "plugins", "asset-center-character-workflow");
 const characterCodexManifest = JSON.parse(readFileSync(path.join(characterRoot, ".codex-plugin", "plugin.json"), "utf8"));
@@ -86,6 +86,10 @@ const bundle = readFileSync(path.join(pluginRoot, "web", "dist", "asset-sourcing
 assert.match(widget, /全屏查看/);
 assert.match(widget, /退出全屏/);
 assert.match(widget, /刷新资产/);
+assert.match(widget, /candidate: `复用素材: \$\{entry\.displayName\}\(点击预览\)`/);
+assert.match(widget, /candidate: "使用three\.js程序生成"/);
+assert.doesNotMatch(widget, /Asset Center 候选：/);
+assert.doesNotMatch(widget, /Three\.js \$\{slot\.name\}基础模型/);
 assert.match(widget, /<th>选项<\/th>\s*<th>当前选择<\/th>\s*<th>候选方案（点击预览）<\/th>/);
 assert.match(widget, /<td className="option-cell">[\s\S]*?<td className="selection-cell">[\s\S]*?<td className="candidate-cell">/);
 assert.match(bridge, /ui\/request-display-mode/);

@@ -158,7 +158,7 @@ function modelRows(slot: any): ChoiceRow[] {
   const center = modelAssets(slot).map((entry) => ({
     key: `center:${entry.id}`,
     value: `reuse_asset_center:${entry.id}`,
-    candidate: `Asset Center 候选：\`${entry.displayName}\``,
+    candidate: `复用素材: ${entry.displayName}(点击预览)`,
     modelSource: "Asset Center 静态 GLB",
     action: "—",
     scene: modelScene(slot),
@@ -169,7 +169,7 @@ function modelRows(slot: any): ChoiceRow[] {
   const fallback: ChoiceRow = {
     key: "primitive_fallback",
     value: "primitive_fallback",
-    candidate: slot.model.fallbackLabel ?? `Three.js ${slot.name}基础模型`,
+    candidate: "使用three.js程序生成",
     modelSource: "程序模型",
     action: "—",
     scene: modelScene(slot),
@@ -270,7 +270,7 @@ function actionRows(slot: any, action: any, selectedModel: any): ChoiceRow[] {
     rows.push({
       key: `${source}:${entry.id}`,
       value: `${source}:${entry.id}`,
-      candidate: `Asset Center：\`${entry.displayName}\``,
+      candidate: `复用素材: ${entry.displayName}(点击预览)`,
       modelSource: `Asset Center 已有${assetSubject(slot)}动作GLB`,
       action: action.name,
       scene: action.scene,

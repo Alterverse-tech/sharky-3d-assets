@@ -41,7 +41,8 @@ Shared asset names, a shared repository, or generic entities such as a character
    | 角色/实体 | 资产需求 | 选项 | 当前选择 | 候选方案（点击预览） | 模型来源 | 动作 | 触发场景 | 动作来源 | 复用状态 |
    |---|---|---|---|---|---|---|---|---|---|
    | 主角骑士（key） | 人物/主体 | A | ☑ 推荐 | 生成原创主角骑士 | 新生成 · Gemini Reference → Tripo | — | 玩家进入城堡 | — | 原创主模型 |
-   | 〃 | 人物/主体 | B | ☐ | [Asset Center 候选：Rusty Knight](https://example.invalid/preview) ↗ | Asset Center 静态 GLB | — | 玩家进入城堡 | — | 候选复用 |
+   | 〃 | 人物/主体 | B | ☐ | [复用素材: Rusty Knight(点击预览)](https://example.invalid/preview) ↗ | Asset Center 静态 GLB | — | 玩家进入城堡 | — | 候选复用 |
+   | 〃 | 人物/主体 | C | ☐ | 使用three.js程序生成 | 程序模型 | — | 玩家进入城堡 | — | — |
    | 主角骑士（key） | 移动动作 | A | ☑ 推荐 | 新生成人物/主体静态 GLB → 新生成 `walk` 动作 GLB | 新生成人物/主体静态 GLB | walk | 第三人称移动探索 | Tripo 重定向 · 新静态 GLB → 新动作 GLB · `preset:biped:walk` | 新人物/主体与新动作成套生成 |
 
    Fix these interaction rules: every 资产需求 group has exactly one selected row; the recommended row is the default but can be changed; only real `previewUrl` values create ↗ links; changing the base resets incompatible action choices; linked actions are enabled only for their corresponding Asset Center base; high-confidence reuse moves to A and becomes recommended, otherwise generation is A and recommended; and the footer contains only `确认资产方案并开始制作` with no cost or summary statistics.
