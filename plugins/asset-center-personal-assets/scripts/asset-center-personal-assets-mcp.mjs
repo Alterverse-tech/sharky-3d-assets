@@ -10,7 +10,7 @@ import { buildSourcingProposal, normalizeConfirmedSourcingPlan } from "./sourcin
 import { ensureOAuthAccessToken } from "./oauth-login.mjs";
 
 const SERVER_NAME = "asset-center-personal-assets";
-const SERVER_VERSION = "0.5.1";
+const SERVER_VERSION = "0.5.2";
 const PROTOCOL_VERSION = "2024-11-05";
 const DEFAULT_API_BASE_URL = "https://studio.13-216-49-19.sslip.io/codex/v1";
 const DEFAULT_TARGET_DIRECTORY = "public/assets/asset-center";
@@ -44,7 +44,7 @@ const SUITABLE_SCENE_CUES = Object.freeze([
   { label: "恐怖探索", terms: ["恐怖", "惊悚", "horror"] }
 ]);
 
-const SOURCING_BOARD_URI = "ui://asset-center-personal-assets/sourcing-board-v6.html";
+const SOURCING_BOARD_URI = "ui://asset-center-personal-assets/sourcing-board-v7.html";
 
 const tools = [
   {

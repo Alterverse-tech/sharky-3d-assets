@@ -16,7 +16,7 @@ const server = readFileSync(path.join(pluginRoot, "scripts", "asset-center-perso
 assert.equal(marketplace.name, "sharky-3d-assets");
 assert.equal(marketplace.plugins[0].source.path, "./plugins/asset-center-personal-assets");
 assert.equal(manifest.name, "asset-center-personal-assets");
-assert.equal(manifest.version, "0.5.1");
+assert.equal(manifest.version, "0.5.2");
 assert.deepEqual(mcp.mcpServers.asset_center_personal_assets.args, ["./scripts/plugin-bootstrap.mjs"]);
 assert.equal(claudeMarketplace.name, "sharky-3d-assets");
 assert.equal(claudeMarketplace.plugins[0].name, "asset-center-personal-assets");
@@ -30,7 +30,8 @@ assert.equal(claudeMarketplace.plugins[1].name, "shark-game-assets");
 assert.equal(claudeMarketplace.plugins[1].source, "./shark-game-assets");
 assert.equal(claudeSkillManifest.name, "shark-game-assets");
 assert.match(bootstrap, /resolveMcpServer/);
-assert.match(server, /SERVER_VERSION = "0\.5\.1"/);
+assert.match(server, new RegExp(`SERVER_VERSION = "${manifest.version.replaceAll(".", "\\.")}"`));
+assert.match(server, /sourcing-board-v7\.html/);
 
 const characterRoot = path.join(repo, "plugins", "asset-center-character-workflow");
 const characterCodexManifest = JSON.parse(readFileSync(path.join(characterRoot, ".codex-plugin", "plugin.json"), "utf8"));
