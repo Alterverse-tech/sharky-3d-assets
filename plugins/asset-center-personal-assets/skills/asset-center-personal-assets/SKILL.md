@@ -5,7 +5,7 @@ description: Use when a Codex game project needs to find, preview, choose, impor
 
 # Asset Center Personal Assets
 
-Use the Asset Center MCP tools to bring the user's own models into the game as immutable, verified local GLB packages. Treat the local package and lock file as the integration boundary.
+Use the Asset Center MCP tools to bring the user's own models into the game as local GLB packages. Treat the local package and lock file as the integration boundary.
 
 ## Two entry modes
 
@@ -41,26 +41,25 @@ Shared asset names, a shared repository, or generic entities such as a character
    | 角色/实体 | 资产需求 | 选项 | 当前选择 | 候选方案（点击预览） | 模型来源 | 动作 | 触发场景 | 动作来源 | 复用状态 |
    |---|---|---|---|---|---|---|---|---|---|
    | 主角骑士（key） | 人物/主体 | A | ☑ 推荐 | 生成原创主角骑士 | 新生成 · Gemini Reference → Tripo | — | 玩家进入城堡 | — | 原创主模型 |
-   | 〃 | 人物/主体 | B | ☐ | [复用素材: Rusty Knight(点击预览)](https://example.invalid/preview) ↗ | Asset Center 静态 GLB | — | 玩家进入城堡 | — | 候选复用 |
-   | 〃 | 人物/主体 | C | ☐ | 使用three.js程序生成 | 程序模型 | — | 玩家进入城堡 | — | — |
+   | 〃 | 人物/主体 | B | ☐ | [Asset Center 候选：Rusty Knight](https://example.invalid/preview) ↗ | Asset Center 静态 GLB | — | 玩家进入城堡 | — | 候选复用 |
    | 主角骑士（key） | 移动动作 | A | ☑ 推荐 | 新生成人物/主体静态 GLB → 新生成 `walk` 动作 GLB | 新生成人物/主体静态 GLB | walk | 第三人称移动探索 | Tripo 重定向 · 新静态 GLB → 新动作 GLB · `preset:biped:walk` | 新人物/主体与新动作成套生成 |
 
    Fix these interaction rules: every 资产需求 group has exactly one selected row; the recommended row is the default but can be changed; only real `previewUrl` values create ↗ links; changing the base resets incompatible action choices; linked actions are enabled only for their corresponding Asset Center base; high-confidence reuse moves to A and becomes recommended, otherwise generation is A and recommended; and the footer contains only `确认资产方案并开始制作` with no cost or summary statistics.
 
    Default recommendation = the best match per requirement; list runners-up as 备选. A static character GLB remains useful even when no action GLB matches, because the user may choose a supported generated-action route or runtime action.
 5. **Wait for one final confirmation.** The only primary action is `确认资产方案并开始制作`. The Widget calls `confirm_asset_sourcing_plan`, which validates and freezes the complete choice set but does not import or generate. In plain hosts, obtain the same one final confirmation in chat. Never import before this confirmation.
-6. **Import only the confirmed reuse set.** Call `pull_asset_to_workspace` once per final `reuse_asset_center` model/action (`public/assets/asset-center` when the project has `public/`; otherwise `assets/asset-center`). Then return each verified `modelPath`, SHA-256, and size to the orchestrator. Generation and runtime decisions remain context for Shark Game Assets; this Plugin does not execute them.
+6. **Import only the confirmed reuse set.** Call `pull_asset_to_workspace` once per final `reuse_asset_center` model/action (`public/assets/asset-center` when the project has `public/`; otherwise `assets/asset-center`). The tool checks `asset-center.lock.json` first, reuses an existing package for the same asset ID, and otherwise performs one ordinary download without size, SHA-256, or GLB-header validation. Return each `modelPath` to the orchestrator. Generation and runtime decisions remain context for Shark Game Assets; this Plugin does not execute them.
 7. **Report gaps.** Return final `generate_new`, `generate_action`, runtime, and fallback choices to the orchestrator. 程序道具 catalog entries are context only — mention them when relevant, do not pull them.
 
    When a character has no suitable reusable base model, the selected model is `generate_new`, or a selected character lacks linked action candidates, show one non-blocking recommendation to [设计人物资产](https://studio.13-216-49-19.sslip.io/asset-center/characters/new). Explain that after the user designs and publishes the character plus its action GLBs, future game tasks can semantically recommend the static character and its `parentAssetId`-linked actions. Do not open the page automatically and do not imply that visiting it alone creates or publishes an action.
 
 ## Rules
 
-- Authentication needs no configuration: the first library request opens Asset Center's authorization page in the user's browser (Google or email code), and tokens stay on their machine. If a request reports pending authorization, tell the user to finish the page that just opened; when no browser appeared, give them the authorization link printed on stderr. Never ask the user to paste a Service Token or any token into chat or source code — `ASSET_CENTER_SERVICE_TOKEN` is only an optional environment override for CI or shared runners.
+- Authentication needs no configuration: the first unauthenticated library request opens Asset Center's authorization page in the user's foreground browser and immediately returns an `asset-center-authorization/v1` result with the same clickable authorization link. Render that Markdown result in the conversation, tell the user to press **Allow access**, and retry the original asset request after authorization. Tokens stay on the user's machine. Never ask the user to paste a Service Token or any token into chat or source code — `ASSET_CENTER_SERVICE_TOKEN` is only an optional environment override for CI or shared runners.
 - Do not pull assets merely because they matched. Pull only what the user confirmed.
 - A `reuse_linked_action` must have `parentAssetId` equal to the selected base character asset id. Clear the old action choice whenever the base changes. Cross-character reuse requires verified compatibility evidence.
 - Never use a signed download URL in game code. The pull tool exchanges it internally and returns only workspace-relative paths.
-- Do not overwrite an existing package when its SHA-256 differs. Surface the conflict and ask whether the user wants a separately named/versioned import.
+- Do not download an asset again when its asset ID already has a valid lock entry and local package. Reuse the existing `modelPath`.
 - Preserve `asset-center.lock.json`; use `inspect_imported_assets` to understand existing imports before proposing a manifest (already-imported assets show as ✅ 已导入, no re-pull).
 - This plugin imports published GLBs. It does not generate, edit, upload, or publish assets.
 
