@@ -15,6 +15,16 @@ const CREDENTIALS_PATH = path.join(CREDENTIALS_DIR, "credentials.json");
 const LOGIN_TIMEOUT_MS = 10 * 60_000;
 const ACCESS_TOKEN_SKEW_MS = 60_000;
 const OAUTH_SCOPE = "openid profile email assets.read offline_access";
+const interactiveSessions = new Map();
+
+export class OAuthAuthorizationRequiredError extends Error {
+  constructor(authorizationUrl, browserOpened) {
+    super("Asset Center authorization is required");
+    this.name = "OAuthAuthorizationRequiredError";
+    this.authorizationUrl = authorizationUrl;
+    this.browserOpened = browserOpened;
+  }
+}
 
 function log(message) {
   process.stderr.write(`[asset-center-oauth] ${message}\n`);
@@ -145,20 +155,38 @@ function waitForCallback(server, callbackPath, expectedState) {
 }
 
 function openBrowser(url) {
-  // Headless and remote sessions may not have a browser; print the URL for manual opening.
-  if (process.env.ASSET_CENTER_OAUTH_NO_BROWSER === "1") return false;
+  // Headless and remote sessions may not have a browser; the caller still returns the URL.
+  if (process.env.ASSET_CENTER_OAUTH_NO_BROWSER === "1") return Promise.resolve(false);
   const platform = process.platform;
-  const command = platform === "darwin" ? "open" : platform === "win32" ? "cmd" : "xdg-open";
-  const args = platform === "win32" ? ["/c", "start", "", url] : [url];
-  try {
-    const child = spawn(command, args, { stdio: "ignore", detached: true });
-    child.on("error", () => log(`Could not open a browser automatically. Open this URL manually: ${url}`));
-    child.unref();
-    return true;
-  } catch {
-    log(`Could not open a browser automatically. Open this URL manually: ${url}`);
-    return false;
-  }
+  const command = platform === "darwin" ? "/usr/bin/open" : platform === "win32" ? "cmd.exe" : "xdg-open";
+  const args = platform === "darwin" ? ["-u", url] : platform === "win32" ? ["/d", "/s", "/c", "start", "", url] : [url];
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (opened) => {
+      if (settled) return;
+      settled = true;
+      resolve(opened);
+    };
+    try {
+      // Keep macOS `open` attached until LaunchServices accepts the request. Without
+      // `-g` it asks the default browser to come to the foreground.
+      const child = spawn(command, args, { stdio: "ignore", detached: false, shell: false });
+      const timer = setTimeout(() => finish(true), 4_000);
+      child.once("error", () => {
+        clearTimeout(timer);
+        log(`Could not open a browser automatically. Open this URL manually: ${url}`);
+        finish(false);
+      });
+      child.once("exit", (code) => {
+        clearTimeout(timer);
+        if (code !== 0) log(`Could not open a browser automatically. Open this URL manually: ${url}`);
+        finish(code === 0);
+      });
+    } catch {
+      log(`Could not open a browser automatically. Open this URL manually: ${url}`);
+      finish(false);
+    }
+  });
 }
 
 async function exchangeToken(metadata, form) {
@@ -190,7 +218,7 @@ async function persistTokens(issuerOrigin, clientId, tokens, previous) {
   return store.issuers[issuerOrigin];
 }
 
-async function interactiveLogin(issuerOrigin) {
+async function createInteractiveSession(issuerOrigin) {
   const metadata = await discoverMetadata(issuerOrigin);
   const callbackPath = `/callback/${base64Url(randomBytes(12))}`;
   const server = createServer();
@@ -215,26 +243,57 @@ async function interactiveLogin(issuerOrigin) {
     authorizeUrl.searchParams.set("scope", OAUTH_SCOPE);
     authorizeUrl.searchParams.set("resource", `${issuerOrigin}/codex/v1`);
 
-    // 先说明再跳转: 让宿主(Codex/Claude Code)有机会把这几句转述给用户,并拿到可手动打开的链接
     log("Starting Asset Center sign-in. If an authorization page opens, complete the confirmation there.");
     log(`Official authorization link (this sign-in only): ${authorizeUrl.toString()}`);
     log(`Waiting for the callback on ${redirectUri}. Sign in and press Allow access; the browser returns here automatically.`);
-    openBrowser(authorizeUrl.toString());
-
-    const code = await waitForCallback(server, callbackPath, state);
-    const tokens = await exchangeToken(metadata, {
-      grant_type: "authorization_code",
-      code,
-      code_verifier: verifier,
-      client_id: clientId,
-      redirect_uri: redirectUri
-    });
-    const saved = await persistTokens(issuerOrigin, clientId, tokens);
-    log("Authorization complete. Credentials are stored locally for the current user only.");
-    return saved;
-  } finally {
+    const callback = waitForCallback(server, callbackPath, state);
+    const completion = (async () => {
+      try {
+        const code = await callback;
+        const tokens = await exchangeToken(metadata, {
+          grant_type: "authorization_code",
+          code,
+          code_verifier: verifier,
+          client_id: clientId,
+          redirect_uri: redirectUri
+        });
+        const saved = await persistTokens(issuerOrigin, clientId, tokens);
+        log("Authorization complete. Credentials are stored locally for the current user only.");
+        return saved;
+      } finally {
+        server.close();
+      }
+    })();
+    // The first tool call returns before the user approves. Keep the background
+    // rejection handled while allowing later callers to await the same promise.
+    void completion.catch((error) => log(`Authorization did not complete: ${error?.message ?? error}`));
+    const browserOpened = await openBrowser(authorizeUrl.toString());
+    return {
+      authorizationUrl: authorizeUrl.toString(),
+      browserOpened,
+      completion
+    };
+  } catch (error) {
     server.close();
+    throw error;
   }
+}
+
+async function beginInteractiveLogin(issuerOrigin) {
+  let pending = interactiveSessions.get(issuerOrigin);
+  if (!pending) {
+    pending = createInteractiveSession(issuerOrigin);
+    interactiveSessions.set(issuerOrigin, pending);
+    void pending.then(
+      (session) => session.completion.finally(() => {
+        if (interactiveSessions.get(issuerOrigin) === pending) interactiveSessions.delete(issuerOrigin);
+      }),
+      () => {
+        if (interactiveSessions.get(issuerOrigin) === pending) interactiveSessions.delete(issuerOrigin);
+      }
+    ).catch(() => undefined);
+  }
+  return pending;
 }
 
 async function refreshTokens(issuerOrigin, record) {
@@ -266,7 +325,11 @@ export async function ensureOAuthAccessToken(issuerOrigin, options = {}) {
   if (options.nonInteractive) {
     throw new Error("Asset Center requires browser sign-in, but this request is non-interactive. Run an asset operation once to complete browser sign-in.");
   }
-  const saved = await interactiveLogin(normalizedOrigin);
+  const session = await beginInteractiveLogin(normalizedOrigin);
+  if (options.returnPendingAuthorization) {
+    throw new OAuthAuthorizationRequiredError(session.authorizationUrl, session.browserOpened);
+  }
+  const saved = await session.completion;
   return saved.accessToken;
 }
 

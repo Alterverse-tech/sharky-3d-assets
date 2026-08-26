@@ -1,22 +1,21 @@
 #!/usr/bin/env node
 
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
 import { sourcingBoardHtml } from "./sourcing-board-resource.mjs";
 import { buildSourcingProposal, normalizeConfirmedSourcingPlan } from "./sourcing-contract.mjs";
-import { ensureOAuthAccessToken } from "./oauth-login.mjs";
+import { ensureOAuthAccessToken, OAuthAuthorizationRequiredError } from "./oauth-login.mjs";
 
 const SERVER_NAME = "asset-center-personal-assets";
-const SERVER_VERSION = "0.5.2";
+const SERVER_VERSION = "0.5.4";
 const PROTOCOL_VERSION = "2024-11-05";
 const DEFAULT_API_BASE_URL = "https://studio.13-216-49-19.sslip.io/codex/v1";
 const DEFAULT_TARGET_DIRECTORY = "public/assets/asset-center";
 const LOCK_SCHEMA = "shark.asset-center-lock/v1";
 const ASSET_SCHEMA = "shark.asset-center-import/v1";
-const MAX_GLB_BYTES = 512 * 1024 * 1024;
 
 const SUITABLE_SCENES_BY_CLASSIFICATION = Object.freeze({
   人物: ["角色扮演", "剧情演出", "NPC/主角"],
@@ -44,7 +43,7 @@ const SUITABLE_SCENE_CUES = Object.freeze([
   { label: "恐怖探索", terms: ["恐怖", "惊悚", "horror"] }
 ]);
 
-const SOURCING_BOARD_URI = "ui://asset-center-personal-assets/sourcing-board-v7.html";
+const SOURCING_BOARD_URI = "ui://asset-center-personal-assets/sourcing-board-v5.html";
 
 const tools = [
   {
@@ -209,7 +208,7 @@ const tools = [
   },
   {
     name: "pull_asset_to_workspace",
-    description: "Download and verify one personal GLB, then package it inside the requested workspace without overwriting changed assets.",
+    description: "Reuse an existing import by asset ID, or download and package one personal GLB inside the requested workspace.",
     inputSchema: {
       type: "object",
       properties: {
@@ -356,8 +355,32 @@ async function callTool(name, args) {
     else throw new Error(`Unknown tool: ${String(name)}`);
     return toolResult(result, false);
   } catch (error) {
+    if (error instanceof OAuthAuthorizationRequiredError) {
+      return toolResult(authorizationRequiredResult(error), false);
+    }
     return toolResult({ error: safeErrorMessage(error) }, true);
   }
+}
+
+function authorizationRequiredResult(error) {
+  const browserMessage = error.browserOpened
+    ? "授权页面已自动打开；如果浏览器没有切到前台，也可以点击下面的链接。"
+    : "浏览器未能自动打开，请点击下面的链接继续授权。";
+  return {
+    schema: "asset-center-authorization/v1",
+    status: "authorization_required",
+    authorizationUrl: error.authorizationUrl,
+    browserOpened: error.browserOpened,
+    markdown: [
+      "### 需要授权 Asset Center",
+      "",
+      browserMessage,
+      "",
+      `[点击打开 Asset Center 授权页面](${error.authorizationUrl})`,
+      "",
+      "完成 **Allow access** 后，请重试刚才的资产请求。"
+    ].join("\n")
+  };
 }
 
 function toolResult(result, isError) {
@@ -490,6 +513,12 @@ function assetTypeCell(asset) {
   return markdownCell([category, type].filter(Boolean).join(" / "));
 }
 
+function assetAnimationsCell(asset) {
+  const animations = Array.isArray(asset?.animations) ? asset.animations.filter(Boolean) : [];
+  if (!animations.length && asset?.actionId) animations.push(asset.actionId);
+  return markdownCell(animations.join(", "));
+}
+
 function assetSuitableScenesCell(asset) {
   const semanticText = [
     asset?.description,
@@ -510,12 +539,6 @@ function inferredClassification(asset) {
   if (asset?.kind === "environment") return "场景";
   if (["static_prop", "interactive_prop", "animated_prop", "vehicle"].includes(asset?.kind)) return "普通道具";
   return "其他";
-}
-
-function assetAnimationsCell(asset) {
-  const animations = Array.isArray(asset?.animations) ? asset.animations.filter(Boolean) : [];
-  if (!animations.length && asset?.actionId) animations.push(asset.actionId);
-  return markdownCell(animations.join(", "));
 }
 
 function assetSizeCell(asset) {
@@ -554,17 +577,13 @@ async function pullAssetToWorkspace(args) {
   const workspaceRoot = await resolveWorkspaceRoot(args.workspaceRoot);
   const targetDirectory = validateRelativeDirectory(args.targetDirectory ?? DEFAULT_TARGET_DIRECTORY);
 
-  const detail = await apiJson(`/assets/${encodeURIComponent(assetId)}`, { authenticated: true });
-  const asset = validateAssetSummary(detail?.asset, assetId);
-  if (!asset.sha256 || !Number.isSafeInteger(asset.sizeBytes) || asset.sizeBytes <= 0) {
-    throw new Error("Asset is missing immutable SHA-256 or size metadata");
-  }
-  if (asset.sizeBytes > MAX_GLB_BYTES) throw new Error(`Asset exceeds the ${MAX_GLB_BYTES} byte local import limit`);
-
-  const lockedImport = await resolveLockedImport(workspaceRoot, asset);
+  const lockedImport = await resolveLockedImport(workspaceRoot, assetId);
   if (lockedImport) {
     return { imported: false, reason: "already_imported", asset: lockedImport };
   }
+
+  const detail = await apiJson(`/assets/${encodeURIComponent(assetId)}`, { authenticated: true });
+  const asset = validateAssetSummary(detail?.asset, assetId);
 
   const targetRoot = await ensureContainedDirectory(workspaceRoot, targetDirectory);
   const packageName = `${slugify(asset.displayName)}--${asset.id}`;
@@ -574,8 +593,8 @@ async function pullAssetToWorkspace(args) {
 
   const existing = await readExistingImport(packageDirectory);
   if (existing) {
-    if (existing.assetId !== asset.id || existing.sha256 !== asset.sha256) {
-      throw new Error(`Local package ${relativePackageDirectory} already exists with different asset metadata; refusing to overwrite it`);
+    if (existing.assetId !== asset.id) {
+      throw new Error(`Local package ${relativePackageDirectory} belongs to another asset; refusing to overwrite it`);
     }
     await updateLockFile(workspaceRoot, lockEntry(asset, relativePackageDirectory, relativeModelPath, existing.importedAt));
     return { imported: false, reason: "already_imported", asset: localAssetResult(asset, relativePackageDirectory, relativeModelPath) };
@@ -597,8 +616,7 @@ async function pullAssetToWorkspace(args) {
   const downloadUrl = requireString(downloadable.downloadUrl, "downloadUrl");
   const response = await fetch(downloadUrl, { redirect: "follow" });
   if (!response.ok) throw new Error(`GLB download failed with HTTP ${response.status}`);
-  const bytes = await readResponseBytes(response, asset.sizeBytes);
-  validateGlb(bytes, asset);
+  const bytes = Buffer.from(await response.arrayBuffer());
 
   const importedAt = new Date().toISOString();
   const metadata = {
@@ -683,7 +701,10 @@ async function resolveBearerToken(forceFreshAuth = false) {
   const configured = envServiceToken();
   if (configured) return configured;
   const issuerOrigin = new URL(apiBaseUrl()).origin;
-  return ensureOAuthAccessToken(issuerOrigin, { forceRefresh: forceFreshAuth });
+  return ensureOAuthAccessToken(issuerOrigin, {
+    forceRefresh: forceFreshAuth,
+    returnPendingAuthorization: true
+  });
 }
 
 function apiBaseUrl() {
@@ -768,13 +789,10 @@ async function readExistingImport(packageDirectory) {
   return metadata;
 }
 
-async function resolveLockedImport(workspaceRoot, asset) {
+async function resolveLockedImport(workspaceRoot, assetId) {
   const lock = await readLockFile(path.join(workspaceRoot, "asset-center.lock.json"));
-  const locked = lock?.assets[asset.id];
+  const locked = lock?.assets[assetId];
   if (!locked) return null;
-  if (locked.sha256 !== asset.sha256) {
-    throw new Error(`Asset ${asset.id} has changed since it was imported; refusing to overwrite the locked local version`);
-  }
   const directory = validateLockRelativePath(locked.packagePath, "packagePath");
   const model = validateLockRelativePath(locked.modelPath, "modelPath");
   if (path.posix.dirname(model) !== directory) throw new Error("Locked model path does not belong to its package directory");
@@ -782,13 +800,13 @@ async function resolveLockedImport(workspaceRoot, asset) {
   const realPackageDirectory = await fs.realpath(packageDirectory);
   if (!isInside(workspaceRoot, realPackageDirectory)) throw new Error("Locked package directory escapes workspaceRoot");
   const metadata = await readExistingImport(realPackageDirectory);
-  if (!metadata || metadata.assetId !== asset.id || metadata.sha256 !== asset.sha256) {
-    throw new Error(`Locked package ${directory} does not match Asset Center metadata`);
+  if (!metadata || metadata.assetId !== assetId) {
+    throw new Error(`Locked package ${directory} does not match asset ${assetId}`);
   }
   const modelPath = path.join(workspaceRoot, ...model.split("/"));
   const modelStat = await fs.lstat(modelPath);
   if (modelStat.isSymbolicLink() || !modelStat.isFile()) throw new Error("Locked model must be a regular file");
-  return localAssetResult(asset, directory, model);
+  return localAssetResult({ ...metadata, id: assetId }, directory, model);
 }
 
 function validateLockRelativePath(value, name) {
@@ -797,33 +815,6 @@ function validateLockRelativePath(value, name) {
     throw new Error(`Locked ${name} is not a safe workspace-relative path`);
   }
   return candidate;
-}
-
-async function readResponseBytes(response, expectedSize) {
-  const contentLength = Number(response.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength !== expectedSize) throw new Error("Downloaded GLB Content-Length does not match Asset Center metadata");
-  if (!response.body) throw new Error("GLB download returned an empty body");
-  const reader = response.body.getReader();
-  const chunks = [];
-  let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > expectedSize || total > MAX_GLB_BYTES) {
-      await reader.cancel();
-      throw new Error("Downloaded GLB is larger than Asset Center metadata");
-    }
-    chunks.push(Buffer.from(value));
-  }
-  return Buffer.concat(chunks, total);
-}
-
-function validateGlb(bytes, asset) {
-  if (bytes.length !== asset.sizeBytes) throw new Error("Downloaded GLB size does not match Asset Center metadata");
-  if (bytes.length < 12 || bytes.subarray(0, 4).toString("ascii") !== "glTF") throw new Error("Downloaded file is not a binary glTF (GLB)");
-  const digest = createHash("sha256").update(bytes).digest("hex");
-  if (digest.toLowerCase() !== asset.sha256.toLowerCase()) throw new Error("Downloaded GLB SHA-256 does not match Asset Center metadata");
 }
 
 async function updateLockFile(workspaceRoot, entry) {
