@@ -1,9 +1,18 @@
 ---
 name: shark-game-assets
-description: Generate, rig, preview, and wire key GLB assets for Codex- or Claude Code-built 3D web games, with a local live preview/progress page created by default for asset work, and publish completed static game builds to a Shark Coding Agent portal when the user chooses. Use when a Three.js, WebGL, or 3D mini game has recognizable entities such as a player, character, enemy, collectible, vehicle, weapon, hazard, boss, mascot, or key prop, or when the user asks to generate, animate, integrate, upload, publish, share, or add game assets or a finished game to the Shark portal/showcase.
+description: Generate, rig, preview, and wire key GLB assets specifically for Codex- or Claude Code-built 3D games, and publish completed static game builds to a Shark Coding Agent portal. Use only when the current task is explicitly tied to a Three.js, WebGL, or 3D game, a game project, game-runtime integration, or Shark game portal/showcase publishing. Do not use or read this skill for standalone character or model creation, recoloring, material editing, rigging, animation, library management, or Asset Center work that is unrelated to a game.
 ---
 
 # Shark Game Assets
+
+## Game-only scope gate
+
+Apply this gate before reading or following the rest of the skill:
+
+- Use this skill only when the current request has an explicit relationship to a game, game project, game scene, gameplay behavior, game-runtime asset integration, or Shark game portal/showcase publishing.
+- A request about a GLB, character, creature, model, material, texture, rig, or animation does not by itself make the task game-related.
+- Do not invoke or continue reading this skill for standalone model work such as creating a character, changing a model's color or material, editing or rigging an isolated GLB, creating animation clips for a non-game asset, or managing an Asset Center library. Route those requests to the relevant character-production, Asset Center, or 3D-modeling workflow instead.
+- When the relationship to a game is absent, stop using this skill. Do not run its update check, sourcing gate, preview setup, generation client, validators, or publishing workflow.
 
 Use this skill when a 3D game needs concrete, recognizable GLB assets rather than only primitive geometry. The skill owns the end-to-end workflow: choose the route, generate a small focused asset set, write/read `asset_manifest.json`, and wire the GLBs into the game with fallbacks.
 
