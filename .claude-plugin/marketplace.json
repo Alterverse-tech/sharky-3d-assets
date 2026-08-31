@@ -5,63 +5,6 @@
   },
   "plugins": [
     {
-      "name": "asset-center-personal-assets",
-      "source": "./plugins/asset-center-personal-assets",
-      "description": "Match, preview, and safely import your personal Asset Center models into game projects — including story-driven semantic recall of the whole personal library.",
-      "version": "0.5.4",
-      "author": {
-        "name": "Shark Studio"
-      },
-      "homepage": "https://github.com/Alterverse-tech/sharky-3d-assets",
-      "repository": "https://github.com/Alterverse-tech/sharky-3d-assets",
-      "category": "developer-tools",
-      "keywords": [
-        "3d",
-        "glb",
-        "game-assets",
-        "asset-center",
-        "threejs"
-      ]
-    },
-    {
-      "name": "shark-game-assets",
-      "source": "./shark-game-assets",
-      "description": "Generate, rig, preview, and wire key GLB assets for 3D web games through the Shark Game Assets service, with reuse-before-generate sourcing and user-confirmed action plans.",
-      "author": {
-        "name": "Shark Studio"
-      },
-      "homepage": "https://github.com/Alterverse-tech/sharky-3d-assets",
-      "repository": "https://github.com/Alterverse-tech/sharky-3d-assets",
-      "category": "developer-tools",
-      "keywords": [
-        "3d",
-        "glb",
-        "game-assets",
-        "threejs",
-        "tripo"
-      ]
-    },
-    {
-      "name": "asset-center-character-workflow",
-      "source": "./plugins/asset-center-character-workflow",
-      "description": "Create and advance human character models in the shared Asset Center Character Workbench — image to T-Pose, GLB, rig, actions, and publish.",
-      "version": "0.4.0",
-      "author": {
-        "name": "Shark Studio"
-      },
-      "homepage": "https://github.com/Alterverse-tech/sharky-3d-assets",
-      "repository": "https://github.com/Alterverse-tech/sharky-3d-assets",
-      "category": "developer-tools",
-      "keywords": [
-        "3d",
-        "character",
-        "t-pose",
-        "glb",
-        "rigging",
-        "asset-center"
-      ]
-    },
-    {
       "name": "cpt-floor",
       "source": "./plugins/cpt-floor",
       "description": "Build, validate, preview, and publish independently authored Central Park Tower floors.",
